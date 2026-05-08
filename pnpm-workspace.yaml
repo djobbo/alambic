@@ -1,0 +1,31 @@
+packages:
+  - apps/*
+  - packages/*
+  - tools/*
+
+catalogMode: prefer
+
+catalog:
+  "@types/node": ^24
+  typescript: ^5
+  vite: npm:@voidzero-dev/vite-plus-core@latest
+  vitest: npm:@voidzero-dev/vite-plus-test@latest
+  vite-plus: latest
+  alchemy: 2.0.0-beta.36
+  # Effect 4 beta — required by alchemy@2 beta peers (`>=4.0.0-beta.60`).
+  effect: 4.0.0-beta.64
+  '@effect/vitest': 4.0.0-beta.64
+overrides:
+  vite: "catalog:"
+  vitest: "catalog:"
+  effect: "catalog:"
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: "*"
+    vitest: "*"
+allowBuilds:
+  msgpackr-extract: true
+  workerd: true
