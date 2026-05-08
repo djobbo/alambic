@@ -6,6 +6,10 @@ This project is using Vite+, a unified toolchain built on top of Vite, Rolldown,
 
 Docs are local at `node_modules/vite-plus/docs` or online at https://viteplus.dev/guide/.
 
+## Vendored upstream code (`.repos`)
+
+When answering questions or writing code that touches **Dokploy** or **Effect** (and any future subtrees), treat the matching directory under `.repos/` as the primary reference: read upstream source, tests, and docs there before relying on npm typings alone or external summaries. See `.plans/vendored-repo-git-subtree.md` for URLs, branches, and pull instructions.
+
 ## Review Checklist
 
 - [ ] Run `vp install` after pulling remote changes and before getting started.

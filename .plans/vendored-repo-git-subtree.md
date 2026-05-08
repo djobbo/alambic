@@ -2,6 +2,17 @@
 
 Use this when you want upstream code (for example a separate **docs** site repo, or a library monorepo) inside this project **without** carrying the full upstream history—only periodic squashed imports.
 
+## Local source of truth (`.repos`)
+
+Trees under `.repos/<name>` are the **authoritative local copy** for how we reason about those upstream projects in _this_ repo. When you implement against, debug, or document behavior of a vendored library or service (for example Effect from `effect-smol`, or Dokploy’s server/API surface), **prefer reading and citing the code and bundled docs inside `.repos`** over guessing from npm types, third-party summaries, or stale web pages. Treat each prefix as the canonical reference for that dependency until you refresh it with `git subtree pull`.
+
+Currently tracked:
+
+| Prefix           | Upstream                                                          | Branch   |
+| ---------------- | ----------------------------------------------------------------- | -------- |
+| `.repos/dokploy` | [dokploy/dokploy](https://github.com/dokploy/dokploy)             | `canary` |
+| `.repos/effect`  | [Effect-TS/effect-smol](https://github.com/Effect-TS/effect-smol) | `main`   |
+
 ## Prerequisites
 
 - This directory must be a **git repository** with at least one commit on the current branch (use `git commit --allow-empty -m "Initial commit"` if the tree is otherwise empty).
@@ -42,4 +53,5 @@ git subtree pull --prefix=.repos/docs docs-upstream main --squash
 
 - Subtree imports are **normal files** in your repo; there is no nested `.git` inside the prefix.
 - Document the chosen **URL**, **branch**, and **prefix** in your team’s onboarding or runbook so future updates use the same values.
-- For pushing changes *back* to the upstream repo, `git subtree split` is possible but uncommon for read-only vendoring; treat the subtree as imported unless you intentionally maintain a fork workflow.
+- Keep the **Local source of truth** table above in sync whenever you add or rename a subtree under `.repos`.
+- For pushing changes _back_ to the upstream repo, `git subtree split` is possible but uncommon for read-only vendoring; treat the subtree as imported unless you intentionally maintain a fork workflow.
