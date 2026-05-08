@@ -8,7 +8,7 @@ Docs are local at `node_modules/vite-plus/docs` or online at https://viteplus.de
 
 ## Vendored upstream code (`.repos`)
 
-When answering questions or writing code that touches **Dokploy** or **Effect** (and any future subtrees), treat the matching directory under `.repos/` as the primary reference: read upstream source, tests, and docs there before relying on npm typings alone or external summaries. See `.plans/vendored-repo-git-subtree.md` for URLs, branches, and pull instructions.
+When answering questions or writing code that touches **Dokploy** (`.repos/dokploy`), **Effect** (`.repos/effect`), **Alchemy** (`.repos/alchemy`), or any future subtrees, treat the matching directory under `.repos/` as the primary reference: read upstream source, tests, and docs there before relying on npm typings alone or external summaries. See `.plans/vendored-repo-git-subtree.md` for URLs, branches, and pull instructions.
 
 ## Review Checklist
 
