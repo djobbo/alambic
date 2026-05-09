@@ -4,6 +4,7 @@ import * as Layer from "effect/Layer";
 import { ComposeProvider, DockerCompose } from "../Docker/Compose.ts";
 import { DockerImage, ImageProvider } from "../Docker/Image.ts";
 import { ApplicationProvider, ApplicationResource } from "./Application.ts";
+import { DeploymentProvider, DeploymentResource } from "./Deployment.ts";
 import { Environment, EnvironmentProvider } from "./Environment.ts";
 import { Project, ProjectProvider } from "./Project.ts";
 import {
@@ -20,7 +21,14 @@ export type ProviderRequirements = Layer.Services<ReturnType<typeof providers>>;
 export const providers = () =>
   Layer.effect(
     Providers,
-    Provider.collection([DockerImage, DockerCompose, Project, Environment, ApplicationResource]),
+    Provider.collection([
+      DockerImage,
+      DockerCompose,
+      Project,
+      Environment,
+      DeploymentResource,
+      ApplicationResource,
+    ]),
   ).pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -28,6 +36,7 @@ export const providers = () =>
         ComposeProvider(),
         ProjectProvider(),
         EnvironmentProvider(),
+        DeploymentProvider(),
         ApplicationProvider(),
       ),
     ),
@@ -41,7 +50,14 @@ export const providers = () =>
 export const testProviders = () =>
   Layer.effect(
     Providers,
-    Provider.collection([DockerImage, DockerCompose, Project, Environment, ApplicationResource]),
+    Provider.collection([
+      DockerImage,
+      DockerCompose,
+      Project,
+      Environment,
+      DeploymentResource,
+      ApplicationResource,
+    ]),
   ).pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -49,6 +65,7 @@ export const testProviders = () =>
         ComposeProvider(),
         ProjectProvider(),
         EnvironmentProvider(),
+        DeploymentProvider(),
         ApplicationProvider(),
       ),
     ),

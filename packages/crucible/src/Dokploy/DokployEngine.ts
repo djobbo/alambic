@@ -19,6 +19,8 @@ import {
   type DockerComposeVolume,
 } from "./dockerCompose.ts";
 
+export type DokployBlueGreenSlot = "blue" | "green";
+
 /** Resolved snapshot returned by {@link DokployEngineShape.findByApplicationId}. */
 export interface DokployApplicationSnapshot {
   readonly applicationId: string;
@@ -27,6 +29,9 @@ export interface DokployApplicationSnapshot {
   readonly dockerImage: string;
   readonly environmentId: string;
   readonly serverId: string | undefined;
+  readonly activeSlot: DokployBlueGreenSlot | undefined;
+  readonly blueApplicationId: string | undefined;
+  readonly greenApplicationId: string | undefined;
 }
 
 export interface DokployProjectSnapshot {
@@ -57,6 +62,13 @@ export interface UpsertDockerApplicationInput {
       }
     | undefined;
   readonly deployment: DeploymentStrategy;
+  readonly blueGreen:
+    | {
+        readonly activeSlot: DokployBlueGreenSlot | undefined;
+        readonly blueApplicationId: string | undefined;
+        readonly greenApplicationId: string | undefined;
+      }
+    | undefined;
   /**
    * Optional compose-shaped options (maps to Dokploy `saveEnvironment`, `application.update`,
    * and optional `port` / `mount` writes).
@@ -162,6 +174,10 @@ export const DokployConnection = Context.Service<DokployConnectionShape>(
 );
 
 const normalizeBaseUrl = (url: string) => url.replace(/\/+$/, "");
+const oppositeSlot = (slot: DokployBlueGreenSlot): DokployBlueGreenSlot =>
+  slot === "blue" ? "green" : "blue";
+const slotAppName = (baseAppName: string, slot: DokployBlueGreenSlot): string =>
+  `${baseAppName}-${slot}`;
 
 /** Walk nested JSON for `applicationId` or Dokploy-style `id`. */
 const extractApplicationId = (body: unknown): string | undefined => {
@@ -625,6 +641,75 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
     upsertDockerApplication: (input) =>
       Effect.gen(function* () {
         yield* Effect.void;
+        if (input.deployment.mode === "blue-green") {
+          const priorActive = input.blueGreen?.activeSlot;
+          const activeSlot = priorActive ?? input.deployment.initialSlot ?? "blue";
+          const inactiveSlot = oppositeSlot(activeSlot);
+          const targetSlot =
+            input.deployment.cutover === "manual" && priorActive !== undefined
+              ? inactiveSlot
+              : inactiveSlot;
+
+          const ensureSlot = (
+            slot: DokployBlueGreenSlot,
+            id: string | undefined,
+            dockerImage: string,
+          ) => {
+            const applicationId = id ?? `mem-${slotAppName(input.appName, slot)}`;
+            const prev = apps.get(applicationId);
+            const snap: DokployApplicationSnapshot = {
+              applicationId,
+              name: `${input.name} (${slot})`,
+              appName: slotAppName(input.appName, slot),
+              dockerImage,
+              environmentId: input.environmentId,
+              serverId: input.serverId,
+              activeSlot: slot,
+              blueApplicationId:
+                slot === "blue" ? applicationId : input.blueGreen?.blueApplicationId,
+              greenApplicationId:
+                slot === "green" ? applicationId : input.blueGreen?.greenApplicationId,
+            };
+            apps.set(applicationId, { ...(prev ?? snap), ...snap });
+            return applicationId;
+          };
+
+          const existingBlue = input.blueGreen?.blueApplicationId;
+          const existingGreen = input.blueGreen?.greenApplicationId;
+          const blueApplicationId = ensureSlot(
+            "blue",
+            existingBlue,
+            targetSlot === "blue"
+              ? input.dockerImage
+              : (apps.get(existingBlue ?? "")?.dockerImage ?? input.dockerImage),
+          );
+          const greenApplicationId = ensureSlot(
+            "green",
+            existingGreen,
+            targetSlot === "green"
+              ? input.dockerImage
+              : (apps.get(existingGreen ?? "")?.dockerImage ?? input.dockerImage),
+          );
+
+          const nextActive =
+            input.deployment.cutover === "manual" && priorActive !== undefined
+              ? priorActive
+              : targetSlot;
+          const activeId = nextActive === "blue" ? blueApplicationId : greenApplicationId;
+          const active = apps.get(activeId)!;
+          const next: DokployApplicationSnapshot = {
+            ...active,
+            name: input.name,
+            appName: input.appName,
+            dockerImage: active.dockerImage,
+            activeSlot: nextActive,
+            blueApplicationId,
+            greenApplicationId,
+          };
+          apps.set(activeId, next);
+          return next;
+        }
+
         const existingId = input.applicationId;
         if (existingId && apps.has(existingId)) {
           const prev = apps.get(existingId)!;
@@ -635,6 +720,9 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
             dockerImage: input.dockerImage,
             environmentId: input.environmentId,
             serverId: input.serverId,
+            activeSlot: undefined,
+            blueApplicationId: undefined,
+            greenApplicationId: undefined,
           };
           apps.set(existingId, next);
           return next;
@@ -647,6 +735,9 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
           dockerImage: input.dockerImage,
           environmentId: input.environmentId,
           serverId: input.serverId,
+          activeSlot: undefined,
+          blueApplicationId: undefined,
+          greenApplicationId: undefined,
         };
         apps.set(applicationId, snap);
         return snap;
@@ -791,52 +882,152 @@ export const DokployEngineHttpLive = Layer.sync(
   (): DokployEngineShape => ({
     upsertDockerApplication: (input) =>
       Effect.gen(function* () {
-        let applicationId = input.applicationId;
+        const upsertSingle = Effect.fn(function* ({
+          applicationId,
+          name,
+          appName,
+          dockerImage,
+        }: {
+          readonly applicationId: string | undefined;
+          readonly name: string;
+          readonly appName: string;
+          readonly dockerImage: string;
+        }) {
+          let nextId = applicationId;
+          if (!nextId) {
+            const created = yield* dokployPost("application.create", {
+              name,
+              appName,
+              environmentId: input.environmentId,
+              serverId: input.serverId ?? null,
+            });
+            nextId = extractApplicationId(created);
+            if (!nextId) {
+              return yield* Effect.fail(
+                new DokployApiError({
+                  message:
+                    "application.create succeeded but no applicationId was found in the JSON body — check Dokploy API version",
+                  body: created,
+                }),
+              );
+            }
+          }
+          const registryBody: Record<string, unknown> = {
+            applicationId: nextId,
+            dockerImage,
+          };
+          if (input.registry?.username) registryBody.username = input.registry.username;
+          if (input.registry?.password)
+            registryBody.password = Redacted.value(input.registry.password);
+          if (input.registry?.registryUrl) registryBody.registryUrl = input.registry.registryUrl;
+          yield* dokployPost("application.saveDockerProvider", registryBody);
+          yield* applyComposeConfiguration(nextId, input.compose);
+          yield* httpDeploy(input.deployment, nextId);
+          const json = yield* getApplicationJson(nextId);
+          return {
+            applicationId: nextId,
+            dockerImage: extractDockerImage(json) ?? dockerImage,
+          };
+        });
 
-        if (!applicationId) {
-          const created = yield* dokployPost("application.create", {
+        if (input.deployment.mode === "blue-green") {
+          const priorActive = input.blueGreen?.activeSlot;
+          const activeSlot = priorActive ?? input.deployment.initialSlot ?? "blue";
+          const inactiveSlot = oppositeSlot(activeSlot);
+          const targetSlot = inactiveSlot;
+          const keepActive = input.deployment.cutover === "manual" && priorActive !== undefined;
+
+          const activeIdBefore =
+            activeSlot === "blue"
+              ? input.blueGreen?.blueApplicationId
+              : input.blueGreen?.greenApplicationId;
+          const activeJsonBefore =
+            activeIdBefore !== undefined ? yield* getApplicationJson(activeIdBefore) : undefined;
+          const activeImageBefore = extractDockerImage(activeJsonBefore);
+
+          const blueResult =
+            targetSlot === "blue"
+              ? yield* upsertSingle({
+                  applicationId: input.blueGreen?.blueApplicationId,
+                  name: `${input.name} (blue)`,
+                  appName: slotAppName(input.appName, "blue"),
+                  dockerImage: input.dockerImage,
+                })
+              : input.blueGreen?.blueApplicationId
+                ? {
+                    applicationId: input.blueGreen.blueApplicationId,
+                    dockerImage:
+                      activeSlot === "blue"
+                        ? (activeImageBefore ?? input.dockerImage)
+                        : input.dockerImage,
+                  }
+                : yield* upsertSingle({
+                    applicationId: undefined,
+                    name: `${input.name} (blue)`,
+                    appName: slotAppName(input.appName, "blue"),
+                    dockerImage:
+                      activeSlot === "blue"
+                        ? (activeImageBefore ?? input.dockerImage)
+                        : input.dockerImage,
+                  });
+
+          const greenResult =
+            targetSlot === "green"
+              ? yield* upsertSingle({
+                  applicationId: input.blueGreen?.greenApplicationId,
+                  name: `${input.name} (green)`,
+                  appName: slotAppName(input.appName, "green"),
+                  dockerImage: input.dockerImage,
+                })
+              : input.blueGreen?.greenApplicationId
+                ? {
+                    applicationId: input.blueGreen.greenApplicationId,
+                    dockerImage:
+                      activeSlot === "green"
+                        ? (activeImageBefore ?? input.dockerImage)
+                        : input.dockerImage,
+                  }
+                : yield* upsertSingle({
+                    applicationId: undefined,
+                    name: `${input.name} (green)`,
+                    appName: slotAppName(input.appName, "green"),
+                    dockerImage:
+                      activeSlot === "green"
+                        ? (activeImageBefore ?? input.dockerImage)
+                        : input.dockerImage,
+                  });
+
+          const nextActiveSlot = keepActive ? activeSlot : targetSlot;
+          const activeResult = nextActiveSlot === "blue" ? blueResult : greenResult;
+          return {
+            applicationId: activeResult.applicationId,
             name: input.name,
             appName: input.appName,
+            dockerImage: activeResult.dockerImage,
             environmentId: input.environmentId,
-            serverId: input.serverId ?? null,
-          });
-          applicationId = extractApplicationId(created);
-          if (!applicationId) {
-            return yield* Effect.fail(
-              new DokployApiError({
-                message:
-                  "application.create succeeded but no applicationId was found in the JSON body — check Dokploy API version",
-                body: created,
-              }),
-            );
-          }
+            serverId: input.serverId,
+            activeSlot: nextActiveSlot,
+            blueApplicationId: blueResult.applicationId,
+            greenApplicationId: greenResult.applicationId,
+          } satisfies DokployApplicationSnapshot;
         }
 
-        const registryBody: Record<string, unknown> = {
-          applicationId,
-          dockerImage: input.dockerImage,
-        };
-        if (input.registry?.username) registryBody.username = input.registry.username;
-        if (input.registry?.password)
-          registryBody.password = Redacted.value(input.registry.password);
-        if (input.registry?.registryUrl) registryBody.registryUrl = input.registry.registryUrl;
-
-        yield* dokployPost("application.saveDockerProvider", registryBody);
-
-        yield* applyComposeConfiguration(applicationId, input.compose);
-
-        yield* httpDeploy(input.deployment, applicationId);
-
-        const json = yield* getApplicationJson(applicationId);
-        const dockerImage = extractDockerImage(json) ?? input.dockerImage ?? "";
-
-        return {
-          applicationId,
+        const single = yield* upsertSingle({
+          applicationId: input.applicationId,
           name: input.name,
           appName: input.appName,
-          dockerImage,
+          dockerImage: input.dockerImage,
+        });
+        return {
+          applicationId: single.applicationId,
+          name: input.name,
+          appName: input.appName,
+          dockerImage: single.dockerImage,
           environmentId: input.environmentId,
           serverId: input.serverId,
+          activeSlot: undefined,
+          blueApplicationId: undefined,
+          greenApplicationId: undefined,
         } satisfies DokployApplicationSnapshot;
       }),
 
@@ -861,6 +1052,9 @@ export const DokployEngineHttpLive = Layer.sync(
           dockerImage,
           environmentId,
           serverId: undefined,
+          activeSlot: undefined,
+          blueApplicationId: undefined,
+          greenApplicationId: undefined,
         });
       }),
 

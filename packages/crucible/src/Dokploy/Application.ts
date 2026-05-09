@@ -30,7 +30,7 @@ type ApplicationShared = {
     readonly password?: Redacted.Redacted<string>;
     readonly registryUrl?: string;
   };
-  readonly deployment?: DeploymentStrategy;
+  readonly deployment?: AlcInput.Input<DeploymentStrategy>;
 };
 
 /** Docker application from image + optional inline service options (Compose-shaped). */
@@ -108,6 +108,10 @@ export type Application = Resource<
     environmentId: string;
     serverId: string | undefined;
     composeFingerprint: string;
+    deploymentFingerprint: string;
+    activeSlot: "blue" | "green" | undefined;
+    blueApplicationId: string | undefined;
+    greenApplicationId: string | undefined;
   },
   never,
   Providers
@@ -133,11 +137,14 @@ const resolvedFingerprint = (logicalId: string, resolved: ResolvedApplicationPro
     ? fingerprintFromCompose(logicalId, resolved)
     : fingerprintFromImage(resolved);
 
+const deploymentFingerprint = (deployment: DeploymentStrategy): string =>
+  JSON.stringify(deployment);
+
 export const ApplicationProvider = () =>
   Provider.effect(
     ApplicationResource,
     Effect.sync(() => ({
-      stables: ["applicationId", "environmentId"],
+      stables: ["applicationId", "environmentId", "blueApplicationId", "greenApplicationId"],
       diff: Effect.fn(function* ({ id, olds, news, output }) {
         if (news === undefined || hasUnresolvedInputs(news)) return undefined;
         const n = news as ResolvedApplicationProps;
@@ -165,6 +172,10 @@ export const ApplicationProvider = () =>
           const appSlugNew = n.appName ?? physical;
           if (appSlugNew !== output.appName) return { action: "update" } as const;
           if (fpExpect !== (output.composeFingerprint ?? "{}")) {
+            return { action: "update" } as const;
+          }
+          const deployFp = deploymentFingerprint(n.deployment ?? defaultDeployment());
+          if (deployFp !== (output.deploymentFingerprint ?? "")) {
             return { action: "update" } as const;
           }
           return undefined;
@@ -196,6 +207,9 @@ export const ApplicationProvider = () =>
           if (nameNew !== nameOld || slugNew !== slugOld) return { action: "update" } as const;
 
           if (fpExpect !== oldFp) return { action: "update" } as const;
+          const deployOld = deploymentFingerprint(o.deployment ?? defaultDeployment());
+          const deployNew = deploymentFingerprint(n.deployment ?? defaultDeployment());
+          if (deployOld !== deployNew) return { action: "update" } as const;
         }
 
         return undefined;
@@ -214,6 +228,10 @@ export const ApplicationProvider = () =>
           environmentId: cloud.environmentId,
           serverId: cloud.serverId,
           composeFingerprint: output.composeFingerprint ?? "{}",
+          deploymentFingerprint: output.deploymentFingerprint ?? "",
+          activeSlot: output.activeSlot,
+          blueApplicationId: output.blueApplicationId,
+          greenApplicationId: output.greenApplicationId,
         };
       }),
       reconcile: Effect.fn(function* ({ id, news, output }) {
@@ -251,6 +269,11 @@ export const ApplicationProvider = () =>
           dockerImage: payload.dockerImage,
           registry: props.registry,
           deployment,
+          blueGreen: {
+            activeSlot: output?.activeSlot,
+            blueApplicationId: output?.blueApplicationId,
+            greenApplicationId: output?.greenApplicationId,
+          },
           compose: payload.compose,
         });
 
@@ -262,12 +285,24 @@ export const ApplicationProvider = () =>
           environmentId: snap.environmentId,
           serverId: snap.serverId,
           composeFingerprint: resolvedFingerprint(id, propsResolved),
+          deploymentFingerprint: deploymentFingerprint(deployment),
+          activeSlot: snap.activeSlot,
+          blueApplicationId: snap.blueApplicationId,
+          greenApplicationId: snap.greenApplicationId,
         };
       }),
       delete: Effect.fn(function* ({ output }) {
         if (!output?.applicationId) return;
         const engine = yield* DokployEngine;
-        yield* engine.deleteApplication(output.applicationId);
+        if (output.blueApplicationId) {
+          yield* engine.deleteApplication(output.blueApplicationId);
+        }
+        if (output.greenApplicationId && output.greenApplicationId !== output.blueApplicationId) {
+          yield* engine.deleteApplication(output.greenApplicationId);
+        }
+        if (!output.blueApplicationId && !output.greenApplicationId) {
+          yield* engine.deleteApplication(output.applicationId);
+        }
       }),
     })),
   );

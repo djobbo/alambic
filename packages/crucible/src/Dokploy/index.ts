@@ -25,6 +25,8 @@ export {
 } from "./DokployEngine.ts";
 export { Environment, EnvironmentProvider } from "./Environment.ts";
 export type { EnvironmentProject, EnvironmentProps } from "./Environment.ts";
+export { Deployment, DeploymentProvider, DeploymentResource } from "./Deployment.ts";
+export type { DeploymentProps } from "./Deployment.ts";
 export { DokployApiError } from "./errors.ts";
 export { Project, ProjectProvider } from "./Project.ts";
 export type { ProjectProps } from "./Project.ts";
