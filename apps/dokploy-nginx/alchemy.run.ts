@@ -9,12 +9,6 @@ dotenv({
   quiet: true,
 });
 
-/**
- * Single Dokploy Docker app: `nginx:alpine`.
- *
- * Env: `DOKPLOY_URL`, `DOKPLOY_API_KEY` (`crucible/Dokploy` connection).
- * The stack provisions a Dokploy Project and Environment, then attaches the Docker application.
- */
 export default Alchemy.Stack(
   "dokploy-nginx",
   {
@@ -26,9 +20,19 @@ export default Alchemy.Stack(
     const environment = yield* Dokploy.Environment("my-cool-environment", {
       project,
     });
+    const publicHost = process.env.PUBLIC_HOST?.trim()!;
     const deployment = yield* Dokploy.Deployment.BlueGreen("nginx-blue-green", {
       cutover: "automatic",
       initialSlot: "blue",
+      traefik: {
+        host: publicHost,
+        targetPort: 80,
+        weightBlue: 90,
+        weightGreen: 10,
+        entryPoints: ["web", "websecure"],
+        tls: true,
+        certResolver: "letsencrypt",
+      },
     });
 
     const nginxImage = yield* Docker.NginxImageTag({ variant: "alpine" });
@@ -36,6 +40,16 @@ export default Alchemy.Stack(
       environment,
       image: nginxImage,
       deployment,
+      service: {
+        volumes: [
+          {
+            type: "file",
+            filePath: "index.html",
+            mountPath: "/usr/share/nginx/html/index.html",
+            content: `<p><span>${publicHost}</span><br/><span>${Dokploy.CRUCIBLE_BLUE_GREEN_SLOT_PLACEHOLDER}</span></p>`,
+          },
+        ],
+      },
     });
 
     return {
@@ -45,6 +59,9 @@ export default Alchemy.Stack(
       activeSlot: app.activeSlot,
       blueApplicationId: app.blueApplicationId,
       greenApplicationId: app.greenApplicationId,
+      /** Hostname matched by weighted Traefik (DNS should point here). */
+      weightedPublicHost: publicHost,
+      domainBindings: app.domainBindings,
     };
   }),
 );

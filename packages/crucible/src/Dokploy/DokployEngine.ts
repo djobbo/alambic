@@ -11,7 +11,9 @@ import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
 import type { DeploymentStrategy } from "./types.ts";
 import { DokployApiError } from "./errors.ts";
+import { buildTraefikBlueGreenDynamicYaml } from "./traefikBlueGreen.ts";
 import {
+  expandComposeBlueGreenPlaceholder,
   mergeComposeEnvParts,
   restartComposeToSwarm,
   type DockerComposePort,
@@ -45,6 +47,23 @@ export interface DokployEnvironmentSnapshot {
   readonly projectId: string;
   readonly name: string;
   readonly description: string | undefined;
+}
+
+/** Dokploy `domain.one` / list row shape — used by {@link DokployEngineShape.listDomainsByApplicationId}. */
+export interface DokployApplicationDomainSnapshot {
+  readonly domainId: string;
+  readonly applicationId: string;
+  readonly host: string;
+  readonly path: string | null | undefined;
+  readonly port: number | null | undefined;
+  readonly internalPath: string | null | undefined;
+  readonly stripPath: boolean;
+  readonly https: boolean;
+  readonly certificateType: string | undefined;
+  readonly customCertResolver: string | null | undefined;
+  readonly customEntrypoint: string | null | undefined;
+  readonly serviceName: string | null | undefined;
+  readonly middlewares: ReadonlyArray<string> | undefined;
 }
 
 export interface UpsertDockerApplicationInput {
@@ -160,6 +179,30 @@ export interface DokployEngineShape {
     DokployApiError | HttpClientError,
     DokployEngineRequirements
   >;
+
+  readonly listDomainsByApplicationId: (
+    applicationId: string,
+  ) => Effect.Effect<
+    ReadonlyArray<DokployApplicationDomainSnapshot>,
+    DokployApiError | HttpClientError,
+    DokployEngineRequirements
+  >;
+
+  readonly createApplicationDomain: (
+    body: Record<string, unknown>,
+  ) => Effect.Effect<
+    { readonly domainId: string },
+    DokployApiError | HttpClientError,
+    DokployEngineRequirements
+  >;
+
+  readonly updateApplicationDomain: (
+    body: Record<string, unknown>,
+  ) => Effect.Effect<void, DokployApiError | HttpClientError, DokployEngineRequirements>;
+
+  readonly deleteDomain: (
+    domainId: string,
+  ) => Effect.Effect<void, DokployApiError | HttpClientError, DokployEngineRequirements>;
 }
 
 export const DokployEngine = Context.Service<DokployEngineShape>("@crucible/Dokploy/DokployEngine");
@@ -309,6 +352,102 @@ const parseEnvironmentListJson = (raw: unknown): ReadonlyArray<DokployEnvironmen
     }
   }
   return [];
+};
+
+const snapshotFromDomainRow = (row: unknown): DokployApplicationDomainSnapshot | undefined => {
+  if (typeof row !== "object" || row === null) return undefined;
+  const o = row as Record<string, unknown>;
+  const domainId = typeof o.domainId === "string" ? o.domainId : undefined;
+  const applicationId = typeof o.applicationId === "string" ? o.applicationId : undefined;
+  const host = typeof o.host === "string" ? o.host : undefined;
+  if (!domainId || !applicationId || !host) return undefined;
+  const middlewaresRaw = o.middlewares;
+  const middlewares =
+    Array.isArray(middlewaresRaw) && middlewaresRaw.every((x) => typeof x === "string")
+      ? (middlewaresRaw as ReadonlyArray<string>)
+      : undefined;
+
+  let pathOut: string | null | undefined;
+  if (typeof o.path === "string") pathOut = o.path;
+  else if (o.path === null) pathOut = null;
+
+  const portRaw = o.port;
+  const port =
+    typeof portRaw === "number"
+      ? portRaw
+      : typeof portRaw === "string"
+        ? Number.parseInt(portRaw, 10)
+        : undefined;
+
+  return {
+    domainId,
+    applicationId,
+    host,
+    path: pathOut,
+    port: Number.isFinite(port) ? port : undefined,
+    internalPath:
+      typeof o.internalPath === "string" ? o.internalPath : (o.internalPath as undefined),
+    stripPath: typeof o.stripPath === "boolean" ? o.stripPath : false,
+    https: typeof o.https === "boolean" ? o.https : false,
+    certificateType: typeof o.certificateType === "string" ? o.certificateType : undefined,
+    customCertResolver:
+      typeof o.customCertResolver === "string"
+        ? o.customCertResolver
+        : o.customCertResolver === null
+          ? null
+          : undefined,
+    customEntrypoint:
+      typeof o.customEntrypoint === "string"
+        ? o.customEntrypoint
+        : o.customEntrypoint === null
+          ? null
+          : undefined,
+    serviceName:
+      typeof o.serviceName === "string" ? o.serviceName : o.serviceName === null ? null : undefined,
+    middlewares,
+  };
+};
+
+const parseDomainsListJson = (raw: unknown): ReadonlyArray<DokployApplicationDomainSnapshot> => {
+  const fromArray = (arr: ReadonlyArray<unknown>) =>
+    arr
+      .map((row) => snapshotFromDomainRow(row))
+      .filter((x): x is DokployApplicationDomainSnapshot => x !== undefined);
+
+  if (Array.isArray(raw)) return fromArray(raw);
+
+  if (raw && typeof raw === "object") {
+    const o = raw as Record<string, unknown>;
+    for (const k of ["json", "items", "domains", "data", "result"]) {
+      const v = o[k];
+      if (Array.isArray(v)) return fromArray(v);
+    }
+  }
+  return [];
+};
+
+/** Walk nested JSON for `domainId`. */
+const extractDomainId = (body: unknown): string | undefined => {
+  const walk = (node: unknown): string | undefined => {
+    if (node === null || node === undefined) return undefined;
+    if (typeof node !== "object") return undefined;
+    if (Array.isArray(node)) {
+      for (const x of node) {
+        const v = walk(x);
+        if (v) return v;
+      }
+      return undefined;
+    }
+    const o = node as Record<string, unknown>;
+    const did = o.domainId;
+    if (typeof did === "string" && did.length > 0) return did;
+    for (const v of Object.values(o)) {
+      const nested = walk(v);
+      if (nested) return nested;
+    }
+    return undefined;
+  };
+  return walk(body);
 };
 
 const snapshotFromProjectJson = (json: unknown): DokployProjectSnapshot | undefined => {
@@ -527,7 +666,7 @@ const replaceApplicationMounts = (
     const existing = extractMountsFromApplication(appJson);
     for (const m of existing) {
       if (typeof m.mountId === "string" && m.mountId.length > 0) {
-        yield* dokployPost("mount.remove", { mountId: m.mountId });
+        yield* dokployPost("mounts.remove", { mountId: m.mountId });
       }
     }
     for (const v of desired) {
@@ -549,7 +688,7 @@ const replaceApplicationMounts = (
         base.filePath = v.filePath;
         base.content = v.content;
       }
-      yield* dokployPost("mount.create", base);
+      yield* dokployPost("mounts.create", base);
     }
   });
 
@@ -557,38 +696,40 @@ const replaceApplicationMounts = (
 const applyComposeConfiguration = (
   applicationId: string,
   compose: DockerComposeService | undefined,
+  blueGreenSlot?: DokployBlueGreenSlot,
 ) =>
   Effect.gen(function* () {
-    if (compose === undefined) return;
+    const resolved = expandComposeBlueGreenPlaceholder(compose, blueGreenSlot);
+    if (resolved === undefined) return;
 
     const shouldSaveEnv =
-      compose.environment !== undefined ||
-      (compose.env !== undefined && compose.env.trim() !== "") ||
-      compose.createEnvFile !== undefined;
+      resolved.environment !== undefined ||
+      (resolved.env !== undefined && resolved.env.trim() !== "") ||
+      resolved.createEnvFile !== undefined;
 
     if (shouldSaveEnv) {
-      const mergedEnv = mergeComposeEnvParts(compose.env, compose.environment);
+      const mergedEnv = mergeComposeEnvParts(resolved.env, resolved.environment);
       yield* dokployPost("application.saveEnvironment", {
         applicationId,
         env: mergedEnv,
         buildArgs: "",
         buildSecrets: "",
-        createEnvFile: compose.createEnvFile ?? true,
+        createEnvFile: resolved.createEnvFile ?? true,
       });
     }
 
-    const update = mergeApplicationUpdateFromCompose(applicationId, compose);
+    const update = mergeApplicationUpdateFromCompose(applicationId, resolved);
     if (update !== undefined) {
       yield* dokployPost("application.update", update);
     }
 
     const json = yield* getApplicationJson(applicationId);
 
-    if (compose.ports !== undefined) {
-      yield* replaceApplicationPorts(applicationId, compose.ports, json ?? {});
+    if (resolved.ports !== undefined) {
+      yield* replaceApplicationPorts(applicationId, resolved.ports, json ?? {});
     }
-    if (compose.volumes !== undefined) {
-      yield* replaceApplicationMounts(applicationId, compose.volumes, json ?? {});
+    if (resolved.volumes !== undefined) {
+      yield* replaceApplicationMounts(applicationId, resolved.volumes, json ?? {});
     }
   });
 
@@ -633,6 +774,8 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
   const apps = new Map<string, DokployApplicationSnapshot>();
   const projects = new Map<string, DokployProjectSnapshot>();
   const environments = new Map<string, DokployEnvironmentSnapshot>();
+  const memDomains = new Map<string, DokployApplicationDomainSnapshot>();
+  let memDomainSeq = 0;
 
   const findEnvByProjectAndName = (projectId: string, name: string) =>
     [...environments.values()].find((e) => e.projectId === projectId && e.name === name);
@@ -746,6 +889,10 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
     deleteApplication: (applicationId) =>
       Effect.gen(function* () {
         yield* Effect.void;
+        const domainIdsForApp = [...memDomains.entries()]
+          .filter(([, row]) => row.applicationId === applicationId)
+          .map(([did]) => did);
+        for (const did of domainIdsForApp) memDomains.delete(did);
         apps.delete(applicationId);
       }),
 
@@ -869,6 +1016,91 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
         yield* Effect.void;
         return [...environments.values()].filter((e) => e.projectId === projectId);
       }),
+
+    listDomainsByApplicationId: (applicationId) =>
+      Effect.gen(function* () {
+        yield* Effect.void;
+        return [...memDomains.values()].filter((d) => d.applicationId === applicationId);
+      }),
+
+    createApplicationDomain: (body) =>
+      Effect.gen(function* () {
+        yield* Effect.void;
+        const applicationId = typeof body.applicationId === "string" ? body.applicationId : "";
+        const host = typeof body.host === "string" ? body.host : "";
+        const domainId = `mem-domain-${memDomainSeq++}`;
+        const https = typeof body.https === "boolean" ? body.https : false;
+        const row: DokployApplicationDomainSnapshot = {
+          domainId,
+          applicationId,
+          host,
+          path: typeof body.path === "string" ? body.path : "/",
+          port: typeof body.port === "number" ? body.port : 3000,
+          internalPath: typeof body.internalPath === "string" ? body.internalPath : "/",
+          stripPath: typeof body.stripPath === "boolean" ? body.stripPath : false,
+          https,
+          certificateType:
+            typeof body.certificateType === "string" ? body.certificateType : undefined,
+          customCertResolver:
+            typeof body.customCertResolver === "string" ? body.customCertResolver : null,
+          customEntrypoint:
+            typeof body.customEntrypoint === "string" ? body.customEntrypoint : null,
+          serviceName: typeof body.serviceName === "string" ? body.serviceName : null,
+          middlewares: Array.isArray(body.middlewares)
+            ? (body.middlewares as ReadonlyArray<string>)
+            : [],
+        };
+        memDomains.set(domainId, row);
+        return { domainId };
+      }),
+
+    updateApplicationDomain: (body) =>
+      Effect.gen(function* () {
+        yield* Effect.void;
+        const domainId = typeof body.domainId === "string" ? body.domainId : "";
+        const prev = memDomains.get(domainId);
+        if (!prev) return;
+        const next: DokployApplicationDomainSnapshot = {
+          ...prev,
+          host: typeof body.host === "string" ? body.host : prev.host,
+          path: typeof body.path === "string" ? body.path : prev.path,
+          port: typeof body.port === "number" ? body.port : prev.port,
+          internalPath:
+            typeof body.internalPath === "string" ? body.internalPath : prev.internalPath,
+          stripPath: typeof body.stripPath === "boolean" ? body.stripPath : prev.stripPath,
+          https: typeof body.https === "boolean" ? body.https : prev.https,
+          certificateType:
+            typeof body.certificateType === "string" ? body.certificateType : prev.certificateType,
+          customCertResolver:
+            typeof body.customCertResolver === "string"
+              ? body.customCertResolver
+              : body.customCertResolver === null
+                ? null
+                : prev.customCertResolver,
+          customEntrypoint:
+            typeof body.customEntrypoint === "string"
+              ? body.customEntrypoint
+              : body.customEntrypoint === null
+                ? null
+                : prev.customEntrypoint,
+          serviceName:
+            typeof body.serviceName === "string"
+              ? body.serviceName
+              : body.serviceName === null
+                ? null
+                : prev.serviceName,
+          middlewares: Array.isArray(body.middlewares)
+            ? (body.middlewares as ReadonlyArray<string>)
+            : prev.middlewares,
+        };
+        memDomains.set(domainId, next);
+      }),
+
+    deleteDomain: (domainId) =>
+      Effect.gen(function* () {
+        yield* Effect.void;
+        memDomains.delete(domainId);
+      }),
   };
 
   return service;
@@ -887,11 +1119,13 @@ export const DokployEngineHttpLive = Layer.sync(
           name,
           appName,
           dockerImage,
+          blueGreenSlot,
         }: {
           readonly applicationId: string | undefined;
           readonly name: string;
           readonly appName: string;
           readonly dockerImage: string;
+          readonly blueGreenSlot?: DokployBlueGreenSlot;
         }) {
           let nextId = applicationId;
           if (!nextId) {
@@ -921,7 +1155,7 @@ export const DokployEngineHttpLive = Layer.sync(
             registryBody.password = Redacted.value(input.registry.password);
           if (input.registry?.registryUrl) registryBody.registryUrl = input.registry.registryUrl;
           yield* dokployPost("application.saveDockerProvider", registryBody);
-          yield* applyComposeConfiguration(nextId, input.compose);
+          yield* applyComposeConfiguration(nextId, input.compose, blueGreenSlot);
           yield* httpDeploy(input.deployment, nextId);
           const json = yield* getApplicationJson(nextId);
           return {
@@ -952,6 +1186,7 @@ export const DokployEngineHttpLive = Layer.sync(
                   name: `${input.name} (blue)`,
                   appName: slotAppName(input.appName, "blue"),
                   dockerImage: input.dockerImage,
+                  blueGreenSlot: "blue",
                 })
               : input.blueGreen?.blueApplicationId
                 ? {
@@ -969,6 +1204,7 @@ export const DokployEngineHttpLive = Layer.sync(
                       activeSlot === "blue"
                         ? (activeImageBefore ?? input.dockerImage)
                         : input.dockerImage,
+                    blueGreenSlot: "blue",
                   });
 
           const greenResult =
@@ -978,6 +1214,7 @@ export const DokployEngineHttpLive = Layer.sync(
                   name: `${input.name} (green)`,
                   appName: slotAppName(input.appName, "green"),
                   dockerImage: input.dockerImage,
+                  blueGreenSlot: "green",
                 })
               : input.blueGreen?.greenApplicationId
                 ? {
@@ -995,10 +1232,32 @@ export const DokployEngineHttpLive = Layer.sync(
                       activeSlot === "green"
                         ? (activeImageBefore ?? input.dockerImage)
                         : input.dockerImage,
+                    blueGreenSlot: "green",
                   });
 
           const nextActiveSlot = keepActive ? activeSlot : targetSlot;
           const activeResult = nextActiveSlot === "blue" ? blueResult : greenResult;
+
+          if (input.deployment.traefik !== undefined) {
+            const [blueJson, greenJson] = yield* Effect.all([
+              getApplicationJson(blueResult.applicationId),
+              getApplicationJson(greenResult.applicationId),
+            ]);
+            const yaml = buildTraefikBlueGreenDynamicYaml({
+              logicalAppSlug: input.appName,
+              baseAppName: input.appName,
+              traefik: input.deployment.traefik,
+              dokployAppNamesBySlot: {
+                blue: extractStringField(blueJson, "appName"),
+                green: extractStringField(greenJson, "appName"),
+              },
+            });
+            yield* dokployPost("application.updateTraefikConfig", {
+              applicationId: blueResult.applicationId,
+              traefikConfig: yaml,
+            });
+          }
+
           return {
             applicationId: activeResult.applicationId,
             name: input.name,
@@ -1203,6 +1462,35 @@ export const DokployEngineHttpLive = Layer.sync(
         const json = yield* dokployGet("environment.byProjectId", { projectId });
         return parseEnvironmentListJson(json).filter((e) => e.projectId === projectId);
       }),
+
+    listDomainsByApplicationId: (applicationId) =>
+      Effect.gen(function* () {
+        const json = yield* dokployGet("domain.byApplicationId", { applicationId });
+        return parseDomainsListJson(json ?? []);
+      }),
+
+    createApplicationDomain: (body) =>
+      Effect.gen(function* () {
+        const created = yield* dokployPost("domain.create", body);
+        const domainId = extractDomainId(created);
+        if (!domainId) {
+          return yield* Effect.fail(
+            new DokployApiError({
+              message:
+                "domain.create succeeded but no domainId was found in the JSON body — check Dokploy API version",
+              body: created,
+            }),
+          );
+        }
+        return { domainId };
+      }),
+
+    updateApplicationDomain: (body) =>
+      Effect.gen(function* () {
+        yield* dokployPost("domain.update", body);
+      }),
+
+    deleteDomain: (domainId) => dokployPostAllow404("domain.delete", { domainId }),
   }),
 );
 

@@ -217,6 +217,88 @@ describe("DokployEngine in-memory", () => {
     expect(out.e2.description).toBe("b");
   });
 
+  test("application domain create list update delete", async () => {
+    const program = Effect.gen(function* () {
+      const engine = yield* DokployEngine;
+      const app = yield* engine.upsertDockerApplication({
+        applicationId: undefined,
+        environmentId: "env-a",
+        serverId: undefined,
+        name: "web",
+        appName: "dom-app",
+        dockerImage: "nginx:alpine",
+        registry: undefined,
+        deployment: { mode: "native", kind: "restart" },
+        blueGreen: undefined,
+      });
+      const { domainId } = yield* engine.createApplicationDomain({
+        applicationId: app.applicationId,
+        host: "api.example.test",
+        path: "/v1/",
+        port: 8080,
+        internalPath: "/",
+        stripPath: true,
+        https: true,
+        certificateType: "letsencrypt",
+        middlewares: ["mw-a"],
+        domainType: "application",
+      });
+      const listed = yield* engine.listDomainsByApplicationId(app.applicationId);
+      yield* engine.updateApplicationDomain({
+        domainId,
+        host: "api.example.test",
+        path: "/v2/",
+        port: 8080,
+        internalPath: "/",
+        stripPath: true,
+        https: false,
+        certificateType: "none",
+        middlewares: [],
+        domainType: "application",
+      });
+      const afterUpdate = yield* engine.listDomainsByApplicationId(app.applicationId);
+      yield* engine.deleteDomain(domainId);
+      const empty = yield* engine.listDomainsByApplicationId(app.applicationId);
+      return { listed, afterUpdate, empty, domainId };
+    });
+
+    const out = await Effect.runPromise(program.pipe(Effect.provide(dokployInMemoryTestLayer)));
+
+    expect(out.listed).toHaveLength(1);
+    expect(out.listed[0]!.domainId).toBe(out.domainId);
+    expect(out.afterUpdate[0]?.path).toBe("/v2/");
+    expect(out.afterUpdate[0]?.https).toBe(false);
+    expect(out.empty).toHaveLength(0);
+  });
+
+  test("application delete clears attached domains", async () => {
+    const program = Effect.gen(function* () {
+      const engine = yield* DokployEngine;
+      const app = yield* engine.upsertDockerApplication({
+        applicationId: undefined,
+        environmentId: "env-a",
+        serverId: undefined,
+        name: "web",
+        appName: "dom-gone",
+        dockerImage: "nginx:alpine",
+        registry: undefined,
+        deployment: { mode: "native", kind: "restart" },
+        blueGreen: undefined,
+      });
+      yield* engine.createApplicationDomain({
+        applicationId: app.applicationId,
+        host: "x.example",
+        domainType: "application",
+      });
+      yield* engine.deleteApplication(app.applicationId);
+      const listed = yield* engine.listDomainsByApplicationId(app.applicationId);
+      return listed;
+    });
+
+    const listed = await Effect.runPromise(program.pipe(Effect.provide(dokployInMemoryTestLayer)));
+    expect(listed).toHaveLength(0);
+  });
+
   test("project delete cascades environments in memory store", async () => {
     const program = Effect.gen(function* () {
       const engine = yield* DokployEngine;

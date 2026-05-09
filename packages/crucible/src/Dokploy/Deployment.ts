@@ -1,9 +1,10 @@
 import { hasUnresolvedInputs } from "alchemy/Diff";
+import type { InputProps } from "alchemy/Input";
 import * as Provider from "alchemy/Provider";
 import { Resource } from "alchemy/Resource";
 import * as Effect from "effect/Effect";
 import type { Providers } from "./Providers.ts";
-import type { DeploymentStrategy } from "./types.ts";
+import type { DeploymentStrategy, TraefikBlueGreenWeightedConfig } from "./types.ts";
 
 export type DeploymentProps = DeploymentStrategy;
 
@@ -25,21 +26,15 @@ export const Deployment = Object.assign(DeploymentResource, {
     props?: {
       readonly cutover?: "automatic" | "manual";
       readonly initialSlot?: "blue" | "green";
+      readonly traefik?: TraefikBlueGreenWeightedConfig;
     },
-  ) =>
-    DeploymentResource(id, {
-      mode: "blue-green",
-      ...(props ?? {}),
-    } satisfies DeploymentStrategy),
-  Native: (id: string, props?: { readonly kind?: "rolling" | "restart" }) =>
-    DeploymentResource(id, {
-      mode: "native",
-      kind: props?.kind ?? "restart",
-    } satisfies DeploymentStrategy),
+  ) => DeploymentResource(id, { mode: "blue-green", ...props } as InputProps<DeploymentProps>),
+  Native: (id: string, props?: { readonly kind?: "rolling" | "restart" }) => {
+    const kind: "rolling" | "restart" = props?.kind ?? "restart";
+    return DeploymentResource(id, { mode: "native", kind } as InputProps<DeploymentProps>);
+  },
   Recreate: (id: string) =>
-    DeploymentResource(id, {
-      mode: "recreate",
-    } satisfies DeploymentStrategy),
+    DeploymentResource(id, { mode: "recreate" } as InputProps<DeploymentProps>),
 });
 
 /**
@@ -52,6 +47,7 @@ export const DeploymentProvider = () =>
     Effect.sync(() => ({
       stables: [],
       diff: Effect.fn(function* ({ olds, news }) {
+        yield* Effect.void;
         if (news === undefined || hasUnresolvedInputs(news)) return undefined;
         const n = news as DeploymentStrategy;
         if (olds === undefined || hasUnresolvedInputs(olds)) return undefined;

@@ -133,4 +133,47 @@ describe("Crucible.Dokploy.Application", () => {
       state: scratch.state,
     });
   });
+
+  test("domains reconcile via Application props", async () => {
+    const scratch = Core.scratchStack(testOptions, "application domains provider");
+
+    const program = Effect.gen(function* () {
+      const v1 = yield* scratch.deploy(
+        Effect.gen(function* () {
+          const proj = yield* Project("infra-domains");
+          const env = yield* Environment("staging-domains", { project: proj });
+          const image = yield* ImageTag("nginx:alpine");
+          return yield* Application.Image("web-domains", {
+            environment: env,
+            image,
+            domains: [{ host: "app.example.local", containerPort: 80, https: true }],
+          });
+        }),
+      );
+
+      expect(v1.domainBindings.length).toBe(1);
+      expect(v1.domainBindings[0]!.applicationId).toBe(v1.applicationId);
+
+      const v2 = yield* scratch.deploy(
+        Effect.gen(function* () {
+          const proj = yield* Project("infra-domains");
+          const env = yield* Environment("staging-domains", { project: proj });
+          const image = yield* ImageTag("nginx:alpine");
+          return yield* Application.Image("web-domains", {
+            environment: env,
+            image,
+          });
+        }),
+      );
+
+      expect(v2.domainBindings).toHaveLength(0);
+
+      yield* scratch.destroy();
+    });
+
+    await Core.run(Core.withProviders(program, testOptions, scratch.name), {
+      ...testOptions,
+      state: scratch.state,
+    });
+  });
 });

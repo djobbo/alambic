@@ -7,6 +7,12 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Redacted from "effect/Redacted";
 import type { ComposeOutput } from "../Docker/Compose.ts";
+import {
+  applicationDomainsFingerprint,
+  syncApplicationDomains,
+  type ApplicationDomainBinding,
+  type ApplicationDomainProps,
+} from "./applicationDomain.ts";
 import { DokployEngine } from "./DokployEngine.ts";
 import { normalizeComposeFingerprint, type DockerComposeService } from "./dockerCompose.ts";
 import type { Providers } from "./Providers.ts";
@@ -25,6 +31,12 @@ type ApplicationShared = {
   readonly name?: string;
   /** Container slug; defaults to Alchemy physical name. */
   readonly appName?: string;
+  /**
+   * Traefik domains synced via Dokploy `domain.*` (single backend per host — the **active** slot).
+   * For blue/green **weighted** traffic on a hostname, use {@link DeploymentStrategy} `traefik.host` instead
+   * of listing that same host here (both would collide or pin traffic incorrectly).
+   */
+  readonly domains?: ReadonlyArray<ApplicationDomainProps>;
   readonly registry?: {
     readonly username?: string;
     readonly password?: Redacted.Redacted<string>;
@@ -112,6 +124,8 @@ export type Application = Resource<
     activeSlot: "blue" | "green" | undefined;
     blueApplicationId: string | undefined;
     greenApplicationId: string | undefined;
+    domainsFingerprint: string;
+    domainBindings: ReadonlyArray<ApplicationDomainBinding>;
   },
   never,
   Providers
@@ -139,6 +153,11 @@ const resolvedFingerprint = (logicalId: string, resolved: ResolvedApplicationPro
 
 const deploymentFingerprint = (deployment: DeploymentStrategy): string =>
   JSON.stringify(deployment);
+
+/** After `hasUnresolvedInputs` is false, deployment is still typed as Input — narrow for fingerprints / engine. */
+const resolvedDeploymentStrategy = (
+  value: ResolvedApplicationProps["deployment"] | undefined,
+): DeploymentStrategy => (value ?? defaultDeployment()) as DeploymentStrategy;
 
 export const ApplicationProvider = () =>
   Provider.effect(
@@ -174,8 +193,12 @@ export const ApplicationProvider = () =>
           if (fpExpect !== (output.composeFingerprint ?? "{}")) {
             return { action: "update" } as const;
           }
-          const deployFp = deploymentFingerprint(n.deployment ?? defaultDeployment());
+          const deployFp = deploymentFingerprint(resolvedDeploymentStrategy(n.deployment));
           if (deployFp !== (output.deploymentFingerprint ?? "")) {
+            return { action: "update" } as const;
+          }
+          const domFp = applicationDomainsFingerprint(n.domains);
+          if (domFp !== (output.domainsFingerprint ?? "[]")) {
             return { action: "update" } as const;
           }
           return undefined;
@@ -207,9 +230,12 @@ export const ApplicationProvider = () =>
           if (nameNew !== nameOld || slugNew !== slugOld) return { action: "update" } as const;
 
           if (fpExpect !== oldFp) return { action: "update" } as const;
-          const deployOld = deploymentFingerprint(o.deployment ?? defaultDeployment());
-          const deployNew = deploymentFingerprint(n.deployment ?? defaultDeployment());
+          const deployOld = deploymentFingerprint(resolvedDeploymentStrategy(o.deployment));
+          const deployNew = deploymentFingerprint(resolvedDeploymentStrategy(n.deployment));
           if (deployOld !== deployNew) return { action: "update" } as const;
+          const domOld = applicationDomainsFingerprint(o.domains);
+          const domNew = applicationDomainsFingerprint(n.domains);
+          if (domOld !== domNew) return { action: "update" } as const;
         }
 
         return undefined;
@@ -232,6 +258,8 @@ export const ApplicationProvider = () =>
           activeSlot: output.activeSlot,
           blueApplicationId: output.blueApplicationId,
           greenApplicationId: output.greenApplicationId,
+          domainsFingerprint: output.domainsFingerprint ?? "[]",
+          domainBindings: output.domainBindings ?? [],
         };
       }),
       reconcile: Effect.fn(function* ({ id, news, output }) {
@@ -257,7 +285,7 @@ export const ApplicationProvider = () =>
         const engine = yield* DokployEngine;
         const physicalAppName = props.appName ?? (yield* createPhysicalName({ id }));
         const displayName = props.name ?? id;
-        const deployment = props.deployment ?? defaultDeployment();
+        const deployment = resolvedDeploymentStrategy(props.deployment);
         const environmentId = props.environment.environmentId;
 
         const snap = yield* engine.upsertDockerApplication({
@@ -277,6 +305,14 @@ export const ApplicationProvider = () =>
           compose: payload.compose,
         });
 
+        const desired = props.domains ?? [];
+        const domainBindings = yield* syncApplicationDomains({
+          engine,
+          desired,
+          previous: output?.domainBindings,
+          attachApplicationId: snap.applicationId,
+        });
+
         return {
           applicationId: snap.applicationId,
           name: snap.name,
@@ -289,11 +325,16 @@ export const ApplicationProvider = () =>
           activeSlot: snap.activeSlot,
           blueApplicationId: snap.blueApplicationId,
           greenApplicationId: snap.greenApplicationId,
+          domainsFingerprint: applicationDomainsFingerprint(props.domains),
+          domainBindings,
         };
       }),
       delete: Effect.fn(function* ({ output }) {
         if (!output?.applicationId) return;
         const engine = yield* DokployEngine;
+        for (const b of output.domainBindings ?? []) {
+          yield* engine.deleteDomain(b.domainId);
+        }
         if (output.blueApplicationId) {
           yield* engine.deleteApplication(output.blueApplicationId);
         }

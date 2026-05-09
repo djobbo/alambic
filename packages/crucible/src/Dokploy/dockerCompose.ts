@@ -19,9 +19,47 @@ export type DockerComposeVolume =
   | {
       readonly type: "file";
       readonly filePath: string;
+      /**
+       * Embedded at deploy time after blue/green slot expansion —
+       * see {@link CRUCIBLE_BLUE_GREEN_SLOT_PLACEHOLDER}.
+       */
       readonly content: string;
       readonly mountPath: string;
     };
+
+/**
+ * In **file** mounts, {@link expandComposeBlueGreenPlaceholder} replaces this token per slot when the
+ * HTTP engine applies compose for a blue/green application (`blue` vs `green`), or with `native`
+ * for a single (non-blue/green) Docker app.
+ *
+ * Keep the token in stack source so {@link normalizeComposeFingerprint} stays stable across cutovers.
+ */
+export const CRUCIBLE_BLUE_GREEN_SLOT_PLACEHOLDER = "{{CRUCIBLE_BLUE_GREEN_SLOT}}" as const;
+
+/**
+ * Expands {@link CRUCIBLE_BLUE_GREEN_SLOT_PLACEHOLDER} inside `type: "file"` volume `content` only.
+ * No-op when the placeholder is absent (returns the same `compose` reference).
+ */
+export const expandComposeBlueGreenPlaceholder = (
+  compose: DockerComposeService | undefined,
+  slot: "blue" | "green" | undefined,
+): DockerComposeService | undefined => {
+  if (compose === undefined) return undefined;
+  const label = slot ?? "native";
+  const { volumes } = compose;
+  if (volumes === undefined) return compose;
+  let hit = false;
+  const next = volumes.map((v) => {
+    if (v.type !== "file") return v;
+    if (!v.content.includes(CRUCIBLE_BLUE_GREEN_SLOT_PLACEHOLDER)) return v;
+    hit = true;
+    return {
+      ...v,
+      content: v.content.split(CRUCIBLE_BLUE_GREEN_SLOT_PLACEHOLDER).join(label),
+    };
+  });
+  return hit ? { ...compose, volumes: next } : compose;
+};
 
 /**
  * Opinionated compose-like shape for Docker services on Dokploy.
