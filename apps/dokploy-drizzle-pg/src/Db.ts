@@ -27,7 +27,7 @@ export const DokployPgDb = Effect.gen(function* () {
   const environment = yield* Dokploy.Environment("staging", { project });
 
   const drizzleGatewayImage = yield* Docker.ImageTag("ghcr.io/drizzle-team/gateway:latest");
-  const postgresImage = yield* Docker.ImageTag("postgres:16-alpine");
+  const postgresImage = yield* Docker.PostgresImageTag({ major: 16, variant: "alpine" });
 
   const compose = yield* Docker.Compose("drizzle-gateway", [
     {

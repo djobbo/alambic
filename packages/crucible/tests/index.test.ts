@@ -7,6 +7,8 @@ describe("crucible package surface", () => {
     expect(Docker.ImageTag).toBeDefined();
     expect(Docker.ImageDigest).toBeDefined();
     expect(Docker.Compose).toBeDefined();
+    expect(Docker.PostgresImageTag).toBeDefined();
+    expect(Docker.postgresEnvironment).toBeDefined();
     expect(Dokploy.Application).toBeDefined();
   });
 });
