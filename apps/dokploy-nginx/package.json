@@ -1,0 +1,23 @@
+{
+  "name": "dokploy-nginx",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predeploy": "pnpm --dir ../../packages/crucible run build",
+    "stack:deploy": "alchemy deploy --yes",
+    "stack:destroy": "alchemy destroy --yes",
+    "diff": "alchemy deploy --dry-run"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "alchemy": "catalog:",
+    "crucible": "workspace:*",
+    "dotenv": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "~6.0.2"
+  }
+}

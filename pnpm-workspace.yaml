@@ -15,6 +15,13 @@ catalog:
   # Effect 4 beta — required by alchemy@2 beta peers (`>=4.0.0-beta.60`).
   effect: 4.0.0-beta.64
   '@effect/vitest': 4.0.0-beta.64
+  '@effect/platform-node': 4.0.0-beta.64
+  '@effect/sql-pg': 4.0.0-beta.64
+  drizzle-orm: 1.0.0-rc.1
+  drizzle-kit: 1.0.0-rc.1
+  pg: ^8.13.2
+  '@types/pg': ^8.11.10
+  dotenv: ^17.4.2
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
@@ -27,5 +34,6 @@ peerDependencyRules:
     vite: "*"
     vitest: "*"
 allowBuilds:
+  esbuild: set this to true or false
   msgpackr-extract: true
   workerd: true

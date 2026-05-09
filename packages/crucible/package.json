@@ -17,7 +17,18 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./dist/index.mjs",
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./Dokploy": {
+      "types": "./dist/Dokploy.d.mts",
+      "import": "./dist/Dokploy.mjs"
+    },
+    "./Docker": {
+      "types": "./dist/Docker.d.mts",
+      "import": "./dist/Docker.mjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -36,6 +47,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@effect/platform-node": "catalog:",
     "@types/node": "^25.5.0",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "bumpp": "^11.0.1",

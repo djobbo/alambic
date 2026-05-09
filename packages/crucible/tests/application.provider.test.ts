@@ -1,0 +1,73 @@
+import * as Core from "alchemy/Test/Core";
+import type { StackServices } from "alchemy/Stack";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import { describe, expect, test } from "vite-plus/test";
+
+import { ImageTag } from "../src/Docker/index.ts";
+import { Application, Environment, Project, testProviders } from "../src/Dokploy/index.ts";
+
+/**
+ * Same lifecycle as `Test.make(...).test.provider`, but routed through
+ * {@link Core.run} so we avoid `@effect/vitest`'s `it.live` (Vitest + Vite+
+ * collection can throw “failed to find the current suite”).
+ */
+const testOptions = {
+  providers: testProviders() as Layer.Layer<
+    Layer.Success<ReturnType<typeof testProviders>>,
+    never,
+    StackServices
+  >,
+};
+
+describe("Crucible.Dokploy.Application", () => {
+  test("create project + env + app, update image, destroy", async () => {
+    const scratch = Core.scratchStack(testOptions, "project env application lifecycle");
+
+    const program = Effect.gen(function* () {
+      const v1 = yield* scratch.deploy(
+        Effect.gen(function* () {
+          const proj = yield* Project("infra");
+          const env = yield* Environment("staging", {
+            project: proj,
+          });
+
+          const image = yield* ImageTag("nginx:alpine");
+          return yield* Application.Image("web", {
+            environment: env,
+            image,
+          });
+        }),
+      );
+
+      expect(v1.dockerImage).toBe("nginx:alpine");
+      expect(v1.applicationId.startsWith("mem-")).toBe(true);
+
+      const v2 = yield* scratch.deploy(
+        Effect.gen(function* () {
+          const proj = yield* Project("infra");
+          const env = yield* Environment("staging", {
+            project: proj,
+          });
+
+          const image = yield* ImageTag("nginx:1.27");
+          return yield* Application.Image("web", {
+            environment: env,
+            image,
+          });
+        }),
+      );
+
+      expect(v2.applicationId).toBe(v1.applicationId);
+      expect(v2.dockerImage).toBe("nginx:1.27");
+      expect(v2.environmentId).toBe(v1.environmentId);
+
+      yield* scratch.destroy();
+    });
+
+    await Core.run(Core.withProviders(program, testOptions, scratch.name), {
+      ...testOptions,
+      state: scratch.state,
+    });
+  });
+});

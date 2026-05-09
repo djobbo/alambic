@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "types": ["node"],
+    "lib": ["ES2023"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["alchemy.run.ts"]
+}
