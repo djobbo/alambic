@@ -1,14 +1,14 @@
+import { DokployApi } from "@crucible/dokploy-api";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Redacted from "effect/Redacted";
 import * as Config from "effect/Config";
-import * as HttpBody from "effect/unstable/http/HttpBody";
 import * as HttpClient from "effect/unstable/http/HttpClient";
-import { HttpClientError } from "effect/unstable/http/HttpClientError";
-import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest";
+import { HttpClientError, isHttpClientError } from "effect/unstable/http/HttpClientError";
 import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
+import * as Schema from "effect/Schema";
 import type { DeploymentStrategy } from "./types.ts";
 import { DokployApiError } from "./errors.ts";
 import { buildTraefikBlueGreenDynamicYaml } from "./traefikBlueGreen.ts";
@@ -110,7 +110,7 @@ export interface UpsertEnvironmentInput {
 
 type DokployEngineRequirements = DokployConnectionShape | HttpClient.HttpClient;
 
-/** Dokploy automation facade — HTTP or in-memory (tests). See `.repos/effect` Context.Service. */
+/** Dokploy automation facade — HTTP or in-memory (tests). Modeled as `Effect.Service` in `.repos/effect`. */
 export interface DokployEngineShape {
   readonly upsertDockerApplication: (
     input: UpsertDockerApplicationInput,
@@ -207,16 +207,12 @@ export interface DokployEngineShape {
 
 export const DokployEngine = Context.Service<DokployEngineShape>("@crucible/Dokploy/DokployEngine");
 
-export interface DokployConnectionShape {
-  readonly baseUrl: string;
-  readonly apiKey: Redacted.Redacted<string>;
-}
+/** OpenAPI often types 2xx as `{}`; decode real JSON from the bundled `HttpClientResponse` (cached `text`). */
+const responseBodyJsonUnknown = (
+  response: HttpClientResponse.HttpClientResponse,
+): Effect.Effect<unknown, HttpClientError, never> =>
+  Effect.map(response.json, (body) => body as unknown);
 
-export const DokployConnection = Context.Service<DokployConnectionShape>(
-  "@crucible/Dokploy/DokployConnection",
-);
-
-const normalizeBaseUrl = (url: string) => url.replace(/\/+$/, "");
 const oppositeSlot = (slot: DokployBlueGreenSlot): DokployBlueGreenSlot =>
   slot === "blue" ? "green" : "blue";
 const slotAppName = (baseAppName: string, slot: DokployBlueGreenSlot): string =>
@@ -461,108 +457,68 @@ const snapshotFromProjectJson = (json: unknown): DokployProjectSnapshot | undefi
   return { projectId, name, description };
 };
 
-const decodeJson = (response: HttpClientResponse.HttpClientResponse) =>
-  Effect.gen(function* () {
-    const text = yield* response.text;
-    if (!text || text.trim() === "") return {} as unknown;
-    return yield* Effect.try({
-      try: () => JSON.parse(text) as unknown,
-      catch: (e) =>
-        new DokployApiError({
-          message: `Invalid JSON from Dokploy: ${String(e)}`,
-          status: response.status,
-          body: text,
-        }),
-    });
-  });
-
-const safeDecodeUnknown = (res: HttpClientResponse.HttpClientResponse) =>
-  Effect.match(decodeJson(res), {
-    onFailure: () => undefined as unknown,
-    onSuccess: (x) => x,
-  });
-
-const dokployPost = (path: string, body: Record<string, unknown>) =>
-  Effect.gen(function* () {
-    const client = yield* HttpClient.HttpClient;
-    const conn = yield* DokployConnection;
-    const url = `${normalizeBaseUrl(conn.baseUrl)}/api/${path}`;
-    const req = HttpClientRequest.post(url, {
-      body: HttpBody.jsonUnsafe(body),
-    }).pipe(
-      HttpClientRequest.setHeader("Content-Type", "application/json"),
-      HttpClientRequest.setHeader("x-api-key", Redacted.value(conn.apiKey)),
-    );
-    const res = yield* client.execute(req);
-    if (res.status >= 400) {
-      const parsed = yield* safeDecodeUnknown(res);
-      return yield* Effect.fail(
-        new DokployApiError({
-          message: `Dokploy POST ${path} failed`,
-          status: res.status,
-          path,
-          body: parsed,
-        }),
-      );
-    }
-    return yield* decodeJson(res);
-  });
-
-const dokployPostAllow404 = (path: string, body: Record<string, unknown>) =>
-  Effect.gen(function* () {
-    const client = yield* HttpClient.HttpClient;
-    const conn = yield* DokployConnection;
-    const url = `${normalizeBaseUrl(conn.baseUrl)}/api/${path}`;
-    const req = HttpClientRequest.post(url, {
-      body: HttpBody.jsonUnsafe(body),
-    }).pipe(
-      HttpClientRequest.setHeader("Content-Type", "application/json"),
-      HttpClientRequest.setHeader("x-api-key", Redacted.value(conn.apiKey)),
-    );
-    const res = yield* client.execute(req);
-    if (res.status === 404) return;
-    if (res.status >= 400) {
-      const parsed = yield* safeDecodeUnknown(res);
-      return yield* Effect.fail(
-        new DokployApiError({
-          message: `Dokploy POST ${path} failed`,
-          status: res.status,
-          path,
-          body: parsed,
-        }),
-      );
-    }
-    yield* decodeJson(res);
-  });
-
-const dokployGet = (path: string, query: Record<string, string>) =>
-  Effect.gen(function* () {
-    const client = yield* HttpClient.HttpClient;
-    const conn = yield* DokployConnection;
-    const base = normalizeBaseUrl(conn.baseUrl);
-    const qs = new URLSearchParams(query).toString();
-    const url = `${base}/api/${path}${qs.length > 0 ? `?${qs}` : ""}`;
-    const req = HttpClientRequest.get(url).pipe(
-      HttpClientRequest.setHeader("x-api-key", Redacted.value(conn.apiKey)),
-    );
-    const res = yield* client.execute(req);
-    if (res.status === 404) return undefined;
-    if (res.status >= 400) {
-      const parsed = yield* safeDecodeUnknown(res);
-      return yield* Effect.fail(
-        new DokployApiError({
-          message: `Dokploy GET ${path} failed`,
-          status: res.status,
-          path,
-          body: parsed,
-        }),
-      );
-    }
-    return yield* decodeJson(res);
-  });
-
 const getApplicationJson = (applicationId: string) =>
-  dokployGet("application.one", { applicationId });
+  Effect.gen(function* () {
+    const api = yield* DokployApi;
+    return yield* api
+      .applicationOne({ params: { applicationId }, config: { includeResponse: true } })
+      .pipe(
+        Effect.map(([json]) => json),
+        Effect.catchTag("ApplicationOne404", () => Effect.succeed(null)),
+      );
+  });
+
+const optionalProjectJson = (projectId: string) =>
+  Effect.gen(function* () {
+    const api = yield* DokployApi;
+    return yield* api
+      .projectOne({ params: { projectId }, config: { includeResponse: true } })
+      .pipe(
+        Effect.map(([json]) => json),
+        Effect.catchTag("ProjectOne404", () => Effect.succeed(null)),
+      );
+  });
+
+const optionalEnvironmentJson = (environmentId: string) =>
+  Effect.gen(function* () {
+    const api = yield* DokployApi;
+    return yield* api
+      .environmentOne({ params: { environmentId }, config: { includeResponse: true } })
+      .pipe(
+        Effect.map(([json]) => json),
+        Effect.catchTag("EnvironmentOne404", () => Effect.succeed(null)),
+      );
+  });
+
+const environmentsByProjectJson = (projectId: string) =>
+  Effect.gen(function* () {
+    const api = yield* DokployApi;
+    return yield* api
+      .environmentByProjectId({
+        params: { projectId },
+        config: { includeResponse: true },
+      })
+      .pipe(
+        Effect.map(([json]) => json),
+        Effect.catchTag("EnvironmentByProjectId404", () => Effect.succeed(null)),
+      );
+  });
+
+const domainsByApplicationJson = (applicationId: string) =>
+  Effect.gen(function* () {
+    const api = yield* DokployApi;
+    const tup = yield* api
+      .domainByApplicationId({
+        params: { applicationId },
+        config: { includeResponse: true },
+      })
+      .pipe(
+        Effect.catchTag("DomainByApplicationId404", () => Effect.succeed(undefined)),
+        Effect.catch(mapSdkFailure("/domain.byApplicationId", "GET")),
+      );
+    if (tup === undefined) return undefined as unknown;
+    return yield* responseBodyJsonUnknown(tup[1]);
+  });
 
 type PortWire = {
   portId?: string;
@@ -640,20 +596,27 @@ const replaceApplicationPorts = (
   appJson: unknown,
 ) =>
   Effect.gen(function* () {
+    const api = yield* DokployApi;
     const existing = extractPortsFromApplication(appJson);
     for (const p of existing) {
       if (typeof p.portId === "string" && p.portId.length > 0) {
-        yield* dokployPost("port.delete", { portId: p.portId });
+        yield* api
+          .portDelete({ payload: { portId: p.portId } })
+          .pipe(Effect.catch(mapSdkFailure("/port.delete", "POST")));
       }
     }
     for (const d of desired) {
-      yield* dokployPost("port.create", {
-        applicationId,
-        publishedPort: d.published,
-        targetPort: d.target,
-        protocol: d.protocol ?? "tcp",
-        publishMode: d.publishMode ?? "host",
-      });
+      yield* api
+        .portCreate({
+          payload: {
+            applicationId,
+            publishedPort: d.published,
+            targetPort: d.target,
+            protocol: d.protocol ?? "tcp",
+            publishMode: d.publishMode ?? "host",
+          },
+        })
+        .pipe(Effect.catch(mapSdkFailure("/port.create", "POST")));
     }
   });
 
@@ -663,32 +626,44 @@ const replaceApplicationMounts = (
   appJson: unknown,
 ) =>
   Effect.gen(function* () {
+    const api = yield* DokployApi;
     const existing = extractMountsFromApplication(appJson);
     for (const m of existing) {
       if (typeof m.mountId === "string" && m.mountId.length > 0) {
-        yield* dokployPost("mounts.remove", { mountId: m.mountId });
+        yield* api
+          .mountsRemove({ payload: { mountId: m.mountId } })
+          .pipe(Effect.catch(mapSdkFailure("/mounts.remove", "POST")));
       }
     }
     for (const v of desired) {
-      const base: Record<string, unknown> = {
-        serviceType: "application",
-        serviceId: applicationId,
-      };
-      if (v.type === "bind") {
-        base.type = "bind";
-        base.hostPath = v.source;
-        base.mountPath = v.target;
-      } else if (v.type === "volume") {
-        base.type = "volume";
-        base.volumeName = v.volumeName;
-        base.mountPath = v.target;
-      } else {
-        base.type = "file";
-        base.mountPath = v.mountPath;
-        base.filePath = v.filePath;
-        base.content = v.content;
-      }
-      yield* dokployPost("mounts.create", base);
+      const base =
+        v.type === "bind"
+          ? {
+              serviceType: "application" as const,
+              serviceId: applicationId,
+              type: "bind" as const,
+              hostPath: v.source,
+              mountPath: v.target,
+            }
+          : v.type === "volume"
+            ? {
+                serviceType: "application" as const,
+                serviceId: applicationId,
+                type: "volume" as const,
+                volumeName: v.volumeName,
+                mountPath: v.target,
+              }
+            : {
+                serviceType: "application" as const,
+                serviceId: applicationId,
+                type: "file" as const,
+                mountPath: v.mountPath,
+                filePath: v.filePath,
+                content: v.content,
+              };
+      yield* api
+        .mountsCreate({ payload: base })
+        .pipe(Effect.catch(mapSdkFailure("/mounts.create", "POST")));
     }
   });
 
@@ -702,6 +677,8 @@ const applyComposeConfiguration = (
     const resolved = expandComposeBlueGreenPlaceholder(compose, blueGreenSlot);
     if (resolved === undefined) return;
 
+    const api = yield* DokployApi;
+
     const shouldSaveEnv =
       resolved.environment !== undefined ||
       (resolved.env !== undefined && resolved.env.trim() !== "") ||
@@ -709,18 +686,24 @@ const applyComposeConfiguration = (
 
     if (shouldSaveEnv) {
       const mergedEnv = mergeComposeEnvParts(resolved.env, resolved.environment);
-      yield* dokployPost("application.saveEnvironment", {
-        applicationId,
-        env: mergedEnv,
-        buildArgs: "",
-        buildSecrets: "",
-        createEnvFile: resolved.createEnvFile ?? true,
-      });
+      yield* api
+        .applicationSaveEnvironment({
+          payload: {
+            applicationId,
+            env: mergedEnv,
+            buildArgs: "",
+            buildSecrets: "",
+            createEnvFile: resolved.createEnvFile ?? true,
+          },
+        })
+        .pipe(Effect.catch(mapSdkFailure("/application.saveEnvironment", "POST")));
     }
 
     const update = mergeApplicationUpdateFromCompose(applicationId, resolved);
     if (update !== undefined) {
-      yield* dokployPost("application.update", update);
+      yield* api
+        .applicationUpdate({ payload: update as never })
+        .pipe(Effect.catch(mapSdkFailure("/application.update", "POST")));
     }
 
     const json = yield* getApplicationJson(applicationId);
@@ -734,36 +717,59 @@ const applyComposeConfiguration = (
   });
 
 const httpDeploy = (strategy: DeploymentStrategy, applicationId: string) =>
-  strategy.mode === "recreate"
-    ? dokployPost("application.redeploy", { applicationId })
-    : dokployPost("application.deploy", { applicationId });
+  Effect.gen(function* () {
+    const api = yield* DokployApi;
+    yield* (
+      strategy.mode === "recreate"
+        ? sdk.applicationRedeploy({ payload: { applicationId } })
+        : sdk.applicationDeploy({ payload: { applicationId } })
+    ).pipe(
+      Effect.catch(
+        mapSdkFailure(
+          strategy.mode === "recreate" ? "/application.redeploy" : "/application.deploy",
+          "POST",
+        ),
+      ),
+    );
+  });
 
 const syncProjectMetadata = (input: UpsertProjectInput, projectId: string) =>
   Effect.gen(function* () {
-    const existing = yield* dokployGet("project.one", { projectId });
+    const existing = yield* optionalProjectJson(projectId);
     const snap = snapshotFromProjectJson(existing);
     if (!snap) return;
     const descEqual = (snap.description ?? undefined) === (input.description ?? undefined);
     if (snap.name === input.name && descEqual) return;
-    const body: Record<string, unknown> = { projectId, name: input.name };
-    if (input.description !== undefined) body.description = input.description;
-    yield* dokployPost("project.update", body);
+    const api = yield* DokployApi;
+    yield* api
+      .projectUpdate({
+        payload: {
+          projectId,
+          name: input.name,
+          ...(input.description !== undefined ? { description: input.description } : {}),
+        },
+      })
+      .pipe(Effect.catch(mapSdkFailure("/project.update", "POST")));
   });
 
 const syncEnvironmentMetadata = (input: UpsertEnvironmentInput, environmentId: string) =>
   Effect.gen(function* () {
-    const existing = yield* dokployGet("environment.one", { environmentId });
+    const existing = yield* optionalEnvironmentJson(environmentId);
     const snap = snapshotFromEnvironmentJson(existing);
     if (!snap) return;
     const descEqual = (snap.description ?? undefined) === (input.description ?? undefined);
     if (snap.name === input.name && descEqual) return;
-    const body: Record<string, unknown> = {
-      environmentId,
-      name: input.name,
-      projectId: input.projectId,
-    };
-    if (input.description !== undefined) body.description = input.description;
-    yield* dokployPost("environment.update", body);
+    const api = yield* DokployApi;
+    yield* api
+      .environmentUpdate({
+        payload: {
+          environmentId,
+          name: input.name,
+          projectId: input.projectId,
+          ...(input.description !== undefined ? { description: input.description } : {}),
+        },
+      })
+      .pipe(Effect.catch(mapSdkFailure("/environment.update", "POST")));
   });
 
 /**
@@ -1128,13 +1134,20 @@ export const DokployEngineHttpLive = Layer.sync(
           readonly blueGreenSlot?: DokployBlueGreenSlot;
         }) {
           let nextId = applicationId;
+          const api = yield* DokployApi;
           if (!nextId) {
-            const created = yield* dokployPost("application.create", {
-              name,
-              appName,
-              environmentId: input.environmentId,
-              serverId: input.serverId ?? null,
-            });
+            const tup = yield* api
+              .applicationCreate({
+                payload: {
+                  name,
+                  appName,
+                  environmentId: input.environmentId,
+                  serverId: input.serverId ?? null,
+                },
+                config: { includeResponse: true },
+              })
+              .pipe(Effect.catch(mapSdkFailure("/application.create", "POST")));
+            const created = yield* responseBodyJsonUnknown(tup[1]);
             nextId = extractApplicationId(created);
             if (!nextId) {
               return yield* Effect.fail(
@@ -1154,7 +1167,9 @@ export const DokployEngineHttpLive = Layer.sync(
           if (input.registry?.password)
             registryBody.password = Redacted.value(input.registry.password);
           if (input.registry?.registryUrl) registryBody.registryUrl = input.registry.registryUrl;
-          yield* dokployPost("application.saveDockerProvider", registryBody);
+          yield* api
+            .applicationSaveDockerProvider({ payload: registryBody as never })
+            .pipe(Effect.catch(mapSdkFailure("/application.saveDockerProvider", "POST")));
           yield* applyComposeConfiguration(nextId, input.compose, blueGreenSlot);
           yield* httpDeploy(input.deployment, nextId);
           const json = yield* getApplicationJson(nextId);
@@ -1252,10 +1267,15 @@ export const DokployEngineHttpLive = Layer.sync(
                 green: extractStringField(greenJson, "appName"),
               },
             });
-            yield* dokployPost("application.updateTraefikConfig", {
-              applicationId: blueResult.applicationId,
-              traefikConfig: yaml,
-            });
+            const sdkTraefik = yield* DokployApi;
+            yield* sdkTraefik
+              .applicationUpdateTraefikConfig({
+                payload: {
+                  applicationId: blueResult.applicationId,
+                  traefikConfig: yaml,
+                },
+              })
+              .pipe(Effect.catch(mapSdkFailure("/application.updateTraefikConfig", "POST")));
           }
 
           return {
@@ -1292,7 +1312,10 @@ export const DokployEngineHttpLive = Layer.sync(
 
     deleteApplication: (applicationId) =>
       Effect.gen(function* () {
-        yield* dokployPost("application.delete", { applicationId });
+        const api = yield* DokployApi;
+        yield* api
+          .applicationDelete({ payload: { applicationId } })
+          .pipe(Effect.catch(mapSdkFailure("/application.delete", "POST")));
       }),
 
     findByApplicationId: (applicationId) =>
@@ -1321,13 +1344,20 @@ export const DokployEngineHttpLive = Layer.sync(
       Effect.gen(function* () {
         let projectId = input.projectId;
         const jsonExisting =
-          projectId !== undefined ? yield* dokployGet("project.one", { projectId }) : undefined;
+          projectId !== undefined ? yield* optionalProjectJson(projectId) : undefined;
 
         if (jsonExisting === undefined || snapshotFromProjectJson(jsonExisting) === undefined) {
-          const created = yield* dokployPost("project.create", {
-            name: input.name,
-            description: input.description ?? null,
-          });
+          const api = yield* DokployApi;
+          const tup = yield* api
+            .projectCreate({
+              payload: {
+                name: input.name,
+                description: input.description ?? null,
+              },
+              config: { includeResponse: true },
+            })
+            .pipe(Effect.catch(mapSdkFailure("/project.create", "POST")));
+          const created = yield* responseBodyJsonUnknown(tup[1]);
           projectId = extractProjectId(created);
           if (!projectId) {
             return yield* Effect.fail(
@@ -1344,7 +1374,7 @@ export const DokployEngineHttpLive = Layer.sync(
         }
 
         const finalId = projectId!;
-        const readBack = yield* dokployGet("project.one", { projectId: finalId });
+        const readBack = yield* optionalProjectJson(finalId);
         const snap =
           snapshotFromProjectJson(readBack) ??
           ({
@@ -1357,12 +1387,21 @@ export const DokployEngineHttpLive = Layer.sync(
 
     deleteProject: (projectId) =>
       Effect.gen(function* () {
-        yield* dokployPostAllow404("project.remove", { projectId });
+        const api = yield* DokployApi;
+        yield* sdk.projectRemove({ payload: { projectId } }).pipe(
+          Effect.catchTag("HttpClientError", (e: HttpClientError) =>
+            e.reason._tag === "StatusCodeError" && e.reason.response.status === 404
+              ? Effect.void
+              : Effect.fail(e),
+          ),
+          Effect.catch(mapSdkFailure("/project.remove", "POST")),
+          Effect.asVoid,
+        );
       }),
 
     findByProjectId: (projectId) =>
       Effect.gen(function* () {
-        const json = yield* dokployGet("project.one", { projectId });
+        const json = yield* optionalProjectJson(projectId);
         const snap = snapshotFromProjectJson(json);
         if (!snap) return Option.none<DokployProjectSnapshot>();
         return Option.some(snap);
@@ -1373,7 +1412,7 @@ export const DokployEngineHttpLive = Layer.sync(
         let environmentId = input.environmentId;
 
         if (environmentId) {
-          const one = yield* dokployGet("environment.one", { environmentId });
+          const one = yield* optionalEnvironmentJson(environmentId);
           const snapExisting = snapshotFromEnvironmentJson(one);
           if (
             snapExisting !== undefined &&
@@ -1381,7 +1420,7 @@ export const DokployEngineHttpLive = Layer.sync(
             snapExisting.environmentId === environmentId
           ) {
             yield* syncEnvironmentMetadata(input, environmentId);
-            const refreshed = yield* dokployGet("environment.one", { environmentId });
+            const refreshed = yield* optionalEnvironmentJson(environmentId);
             return (
               snapshotFromEnvironmentJson(refreshed) ?? {
                 environmentId,
@@ -1405,24 +1444,29 @@ export const DokployEngineHttpLive = Layer.sync(
           }
         }
 
-        const listJson = yield* dokployGet("environment.byProjectId", {
-          projectId: input.projectId,
-        });
+        const listJson = yield* environmentsByProjectJson(input.projectId);
         const list = parseEnvironmentListJson(listJson);
         const match = list.find((e) => e.name === input.name && e.projectId === input.projectId);
         if (match) {
           environmentId = match.environmentId;
           yield* syncEnvironmentMetadata(input, environmentId);
-          const refreshed = yield* dokployGet("environment.one", { environmentId });
+          const refreshed = yield* optionalEnvironmentJson(environmentId);
           const snapFinal = snapshotFromEnvironmentJson(refreshed);
           if (snapFinal) return snapFinal;
         }
 
-        const created = yield* dokployPost("environment.create", {
-          projectId: input.projectId,
-          name: input.name,
-          description: input.description ?? "",
-        });
+        const sdkEc = yield* DokployApi;
+        const tupEc = yield* sdkEc
+          .environmentCreate({
+            payload: {
+              projectId: input.projectId,
+              name: input.name,
+              description: input.description ?? "",
+            },
+            config: { includeResponse: true },
+          })
+          .pipe(Effect.catch(mapSdkFailure("/environment.create", "POST")));
+        const created = yield* responseBodyJsonUnknown(tupEc[1]);
         environmentId = extractEnvironmentId(created);
         if (!environmentId) {
           return yield* Effect.fail(
@@ -1433,9 +1477,9 @@ export const DokployEngineHttpLive = Layer.sync(
             }),
           );
         }
-        const refreshed = yield* dokployGet("environment.one", { environmentId });
-        const snapFinal = snapshotFromEnvironmentJson(refreshed);
-        if (snapFinal) return snapFinal;
+        const refreshedAfterCreate = yield* optionalEnvironmentJson(environmentId);
+        const snapFinalAfterCreate = snapshotFromEnvironmentJson(refreshedAfterCreate);
+        if (snapFinalAfterCreate) return snapFinalAfterCreate;
         return {
           environmentId,
           projectId: input.projectId,
@@ -1446,12 +1490,21 @@ export const DokployEngineHttpLive = Layer.sync(
 
     deleteEnvironment: (environmentId) =>
       Effect.gen(function* () {
-        yield* dokployPostAllow404("environment.remove", { environmentId });
+        const api = yield* DokployApi;
+        yield* sdk.environmentRemove({ payload: { environmentId } }).pipe(
+          Effect.catchTag("HttpClientError", (e: HttpClientError) =>
+            e.reason._tag === "StatusCodeError" && e.reason.response.status === 404
+              ? Effect.void
+              : Effect.fail(e),
+          ),
+          Effect.catch(mapSdkFailure("/environment.remove", "POST")),
+          Effect.asVoid,
+        );
       }),
 
     findByEnvironmentId: (environmentId) =>
       Effect.gen(function* () {
-        const json = yield* dokployGet("environment.one", { environmentId });
+        const json = yield* optionalEnvironmentJson(environmentId);
         const snap = snapshotFromEnvironmentJson(json);
         if (!snap) return Option.none<DokployEnvironmentSnapshot>();
         return Option.some(snap);
@@ -1459,19 +1512,23 @@ export const DokployEngineHttpLive = Layer.sync(
 
     listEnvironmentsByProjectId: (projectId) =>
       Effect.gen(function* () {
-        const json = yield* dokployGet("environment.byProjectId", { projectId });
+        const json = yield* environmentsByProjectJson(projectId);
         return parseEnvironmentListJson(json).filter((e) => e.projectId === projectId);
       }),
 
     listDomainsByApplicationId: (applicationId) =>
       Effect.gen(function* () {
-        const json = yield* dokployGet("domain.byApplicationId", { applicationId });
+        const json = yield* domainsByApplicationJson(applicationId);
         return parseDomainsListJson(json ?? []);
       }),
 
     createApplicationDomain: (body) =>
       Effect.gen(function* () {
-        const created = yield* dokployPost("domain.create", body);
+        const api = yield* DokployApi;
+        const tup = yield* api
+          .domainCreate({ payload: body as never, config: { includeResponse: true } })
+          .pipe(Effect.catch(mapSdkFailure("/domain.create", "POST")));
+        const created = yield* responseBodyJsonUnknown(tup[1]);
         const domainId = extractDomainId(created);
         if (!domainId) {
           return yield* Effect.fail(
@@ -1487,10 +1544,25 @@ export const DokployEngineHttpLive = Layer.sync(
 
     updateApplicationDomain: (body) =>
       Effect.gen(function* () {
-        yield* dokployPost("domain.update", body);
+        const api = yield* DokployApi;
+        yield* api
+          .domainUpdate({ payload: body as never })
+          .pipe(Effect.catch(mapSdkFailure("/domain.update", "POST")));
       }),
 
-    deleteDomain: (domainId) => dokployPostAllow404("domain.delete", { domainId }),
+    deleteDomain: (domainId) =>
+      Effect.gen(function* () {
+        const api = yield* DokployApi;
+        yield* sdk.domainDelete({ payload: { domainId } }).pipe(
+          Effect.catchTag("HttpClientError", (e: HttpClientError) =>
+            e.reason._tag === "StatusCodeError" && e.reason.response.status === 404
+              ? Effect.void
+              : Effect.fail(e),
+          ),
+          Effect.catch(mapSdkFailure("/domain.delete", "POST")),
+          Effect.asVoid,
+        );
+      }),
   }),
 );
 

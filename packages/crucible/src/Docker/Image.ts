@@ -19,7 +19,7 @@ const slugLogicalId = (ref: string) =>
     .slice(0, 96) || "image";
 
 /** Logical resource backing Docker image refs. */
-export type DockerImageShape = Resource<
+export type DockerImage = Resource<
   "Crucible.Docker.Image",
   ImageProps,
   { readonly dockerImage: string },
@@ -28,7 +28,7 @@ export type DockerImageShape = Resource<
 >;
 
 /** Register with {@link ImageProvider}. */
-export const DockerImage = Resource<DockerImageShape>("Crucible.Docker.Image");
+export const DockerImage = Resource<DockerImage>("Crucible.Docker.Image");
 
 export const ImageProvider = () =>
   Provider.effect(

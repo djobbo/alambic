@@ -57,7 +57,7 @@ const resolvedFingerprint = (services: ReadonlyArray<ComposeServiceResolved>): s
   );
 
 /** Logical multi-service manifest; use with {@link Application.Compose}. */
-export type DockerComposeShape = Resource<
+export type DockerCompose = Resource<
   "Crucible.Docker.Compose",
   ComposeProps,
   ComposeOutput,
@@ -65,7 +65,7 @@ export type DockerComposeShape = Resource<
   Providers
 >;
 
-export const DockerCompose = Resource<DockerComposeShape>("Crucible.Docker.Compose");
+export const DockerCompose = Resource<DockerCompose>("Crucible.Docker.Compose");
 
 export const ComposeProvider = () =>
   Provider.effect(

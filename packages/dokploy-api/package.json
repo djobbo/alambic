@@ -1,5 +1,5 @@
 {
-  "name": "crucible",
+  "name": "@crucible/dokploy-api",
   "version": "0.0.0",
   "description": "A starter for creating a TypeScript package.",
   "homepage": "https://github.com/author/library#readme",
@@ -21,14 +21,6 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
-    "./Dokploy": {
-      "types": "./dist/Dokploy.d.mts",
-      "import": "./dist/Dokploy.mjs"
-    },
-    "./Docker": {
-      "types": "./dist/Docker.d.mts",
-      "import": "./dist/Docker.mjs"
-    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -39,19 +31,19 @@
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check",
-    "prepublishOnly": "vp run build"
+    "prepublishOnly": "vp run build",
+    "codegen": "node scripts/codegen.mjs"
   },
   "dependencies": {
-    "@crucible/dokploy-api": "workspace:*",
-    "@effect/vitest": "catalog:",
-    "alchemy": "catalog:",
+    "@effect/platform-node": "catalog:",
     "effect": "catalog:"
   },
   "devDependencies": {
-    "@effect/platform-node": "catalog:",
+    "@effect/openapi-generator": "catalog:",
     "@types/node": "^25.5.0",
     "@typescript/native-preview": "7.0.0-dev.20260328.1",
     "bumpp": "^11.0.1",
+    "swagger2openapi": "^7.0.8",
     "typescript": "^6.0.2",
     "vite-plus": "^0.1.14"
   }

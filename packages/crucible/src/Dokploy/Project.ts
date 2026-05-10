@@ -1,11 +1,11 @@
-import { hasUnresolvedInputs } from "alchemy/Diff";
+import { isResolved } from "alchemy/Diff";
 import { createPhysicalName } from "alchemy/PhysicalName";
 import * as Provider from "alchemy/Provider";
 import { Resource } from "alchemy/Resource";
 import * as Effect from "effect/Effect";
-import * as Option from "effect/Option";
-import { DokployEngine } from "./DokployEngine.ts";
 import type { Providers } from "./Providers.ts";
+import { Dokploy } from "./Dokploy.ts";
+import * as Option from "effect/Option";
 
 export interface ProjectProps {
   /** Display name in Dokploy; defaults to a stable physical name from the logical id. */
@@ -33,47 +33,58 @@ export const ProjectProvider = () =>
     Effect.sync(() => ({
       stables: ["projectId"],
       diff: Effect.fn(function* ({ id, news, output }) {
-        if (news === undefined || hasUnresolvedInputs(news)) return undefined;
-        const n = news as ProjectProps;
+        if (!isResolved(news)) return;
+        if (!output) return;
 
-        const displayName = n.name ?? (yield* createPhysicalName({ id }));
-
-        if (output !== undefined) {
-          if ((n.description ?? undefined) !== (output.description ?? undefined))
-            return { action: "update" } as const;
-          if (displayName !== output.name) return { action: "update" } as const;
-          return undefined;
+        if ((news.description ?? undefined) !== (output.description ?? undefined)) {
+          return { action: "update" } as const;
         }
 
-        return undefined;
+        const displayName = news.name ?? (yield* createPhysicalName({ id }));
+        if (displayName !== output.name) {
+          return { action: "update" } as const;
+        }
       }),
       read: Effect.fn(function* ({ output }) {
-        if (!output?.projectId) return undefined;
-        const engine = yield* DokployEngine;
-        const snap = yield* engine.findByProjectId(output.projectId);
-        return Option.getOrUndefined(snap);
+        if (!output) return;
+        const dokploy = yield* Dokploy;
+        const project = yield* dokploy.projects.findById(output.projectId);
+        if (Option.isNone(project)) return;
+
+        return {
+          projectId: project.value.projectId,
+          name: project.value.name,
+          description: project.value.description ?? undefined,
+        };
       }),
       reconcile: Effect.fn(function* ({ id, news, output }) {
-        const incoming = news ?? {};
-        if (hasUnresolvedInputs(incoming)) {
+        if (!isResolved(news)) {
           return yield* Effect.die(
             new Error("Crucible.Dokploy.Project: unresolved props at reconcile"),
           );
         }
-        const props = incoming as ProjectProps;
-        const engine = yield* DokployEngine;
-        const displayName = props.name ?? (yield* createPhysicalName({ id }));
+        const dokploy = yield* Dokploy;
+        const displayName = news.name ?? (yield* createPhysicalName({ id }));
 
-        return yield* engine.upsertProject({
+        const updated = yield* dokploy.projects.upsert({
           projectId: output?.projectId,
           name: displayName,
-          description: props.description,
+          description: news.description,
         });
+
+        if (Option.isNone(updated)) {
+          return yield* Effect.die(new Error("Crucible.Dokploy.Project: failed to update project"));
+        }
+        return {
+          projectId: updated.value.projectId,
+          name: updated.value.name,
+          description: updated.value.description ?? undefined,
+        };
       }),
       delete: Effect.fn(function* ({ output }) {
         if (!output?.projectId) return;
-        const engine = yield* DokployEngine;
-        yield* engine.deleteProject(output.projectId);
+        const dokploy = yield* Dokploy;
+        yield* dokploy.projects.delete(output.projectId);
       }),
     })),
   );

@@ -1,0 +1,321 @@
+[
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.environmentLike",
+    "value": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["environmentId", "projectId", "name"],
+      "properties": {
+        "environmentId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.projectRow",
+    "value": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["projectId", "name"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.projectCreateResult",
+    "value": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["project", "environment"],
+      "properties": {
+        "project": { "$ref": "#/components/schemas/dokploy.projectRow" },
+        "environment": { "$ref": "#/components/schemas/dokploy.environmentLike" }
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.projectOneGraph",
+    "value": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["projectId", "name"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "environments": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        }
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.applicationLike",
+    "value": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["applicationId", "appName", "name", "environmentId", "hasGitProviderAccess"],
+      "properties": {
+        "applicationId": { "type": "string" },
+        "appName": { "type": "string" },
+        "name": { "type": "string" },
+        "environmentId": { "type": "string" },
+        "hasGitProviderAccess": { "type": "boolean" },
+        "unauthorizedProvider": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "ports": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        },
+        "mounts": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        }
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.domainLike",
+    "value": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["domainId", "host"],
+      "properties": {
+        "domainId": { "type": "string" },
+        "applicationId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "composeId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "host": { "type": "string" },
+        "path": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "port": { "anyOf": [{ "type": "number" }, { "type": "string" }, { "type": "null" }] }
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.portLike",
+    "value": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["portId", "applicationId", "publishedPort", "targetPort"],
+      "properties": {
+        "portId": { "type": "string" },
+        "applicationId": { "type": "string" },
+        "publishedPort": { "type": "number" },
+        "targetPort": { "type": "number" }
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.mountLike",
+    "value": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["mountId", "mountPath"],
+      "properties": {
+        "mountId": { "type": "string" },
+        "mountPath": { "type": "string" },
+        "applicationId": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.booleanOrNull",
+    "value": {
+      "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.environmentArray",
+    "value": {
+      "type": "array",
+      "items": { "$ref": "#/components/schemas/dokploy.environmentLike" }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.domainArray",
+    "value": {
+      "type": "array",
+      "items": { "$ref": "#/components/schemas/dokploy.domainLike" }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.nullableProjectRow",
+    "value": {
+      "anyOf": [{ "$ref": "#/components/schemas/dokploy.projectRow" }, { "type": "null" }]
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.nullableEnvironmentLike",
+    "value": {
+      "anyOf": [{ "$ref": "#/components/schemas/dokploy.environmentLike" }, { "type": "null" }]
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.nullableDomainLike",
+    "value": {
+      "anyOf": [{ "$ref": "#/components/schemas/dokploy.domainLike" }, { "type": "null" }]
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.nullablePortLike",
+    "value": {
+      "anyOf": [{ "$ref": "#/components/schemas/dokploy.portLike" }, { "type": "null" }]
+    }
+  },
+  {
+    "op": "add",
+    "path": "/components/schemas/dokploy.nullableMountLike",
+    "value": {
+      "anyOf": [{ "$ref": "#/components/schemas/dokploy.mountLike" }, { "type": "null" }]
+    }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.create/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.applicationLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.one/get/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.applicationLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.delete/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.applicationLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveEnvironment/post/responses/200/content/application~1json/schema",
+    "value": { "type": "boolean" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.update/post/responses/200/content/application~1json/schema",
+    "value": { "type": "boolean" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.redeploy/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.booleanOrNull" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.deploy/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.booleanOrNull" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveDockerProvider/post/responses/200/content/application~1json/schema",
+    "value": { "type": "boolean" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.updateTraefikConfig/post/responses/200/content/application~1json/schema",
+    "value": { "type": "boolean" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.create/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.projectCreateResult" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.one/get/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.projectOneGraph" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.remove/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.projectRow" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.update/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.nullableProjectRow" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.create/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.environmentLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.one/get/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.environmentLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.byProjectId/get/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.environmentArray" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.remove/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.environmentLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.update/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.nullableEnvironmentLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.create/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.domainLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.byApplicationId/get/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.domainArray" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.update/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.nullableDomainLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.delete/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.nullableDomainLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1port.create/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.portLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1port.delete/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.nullablePortLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mounts.create/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.mountLike" }
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mounts.remove/post/responses/200/content/application~1json/schema",
+    "value": { "$ref": "#/components/schemas/dokploy.nullableMountLike" }
+  }
+]

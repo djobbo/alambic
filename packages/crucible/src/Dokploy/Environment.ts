@@ -1,26 +1,18 @@
-import { hasUnresolvedInputs } from "alchemy/Diff";
-import type * as AlcInput from "alchemy/Input";
+import { isResolved } from "alchemy/Diff";
 import * as Provider from "alchemy/Provider";
 import { Resource } from "alchemy/Resource";
 import * as Effect from "effect/Effect";
-import * as Option from "effect/Option";
-import { DokployEngine } from "./DokployEngine.ts";
 import type { Providers } from "./Providers.ts";
-
-/** Parent {@link Project} output — pass a `Project` resource to satisfy this. */
-export type EnvironmentProject = AlcInput.Input<{ readonly projectId: string }>;
+import type { Project } from "./Project.ts";
+import { Dokploy } from "./Dokploy.ts";
+import * as Option from "effect/Option";
 
 export interface EnvironmentProps {
-  readonly project: EnvironmentProject;
+  readonly project: Project;
   /** Dokploy environment name (`production` is reserved by Dokploy — use another name here). */
   readonly name?: string;
   readonly description?: string;
 }
-
-/** After plan resolution, refs are plain attribute objects. */
-type ResolvedEnvironmentProps = Omit<EnvironmentProps, "project"> & {
-  readonly project: { readonly projectId: string };
-};
 
 export type Environment = Resource<
   "Crucible.Dokploy.Environment",
@@ -43,60 +35,78 @@ export const EnvironmentProvider = () =>
     Effect.sync(() => ({
       stables: ["environmentId", "projectId"],
       diff: Effect.fn(function* ({ id, olds, news, output }) {
-        yield* Effect.void;
-        if (news === undefined || hasUnresolvedInputs(news)) return undefined;
-        const n = news as ResolvedEnvironmentProps;
+        if (!isResolved(news)) return;
 
-        const envName = n.name ?? id;
-        const projectId = n.project.projectId;
+        const envName = news.name ?? id;
+        const projectIdAccessor = yield* news.project.projectId;
+        const projectId = yield* projectIdAccessor;
 
-        if (output !== undefined) {
+        if (output) {
           if (projectId !== output.projectId) return { action: "replace" } as const;
-          if ((n.description ?? undefined) !== (output.description ?? undefined))
+          if ((news.description ?? undefined) !== (output.description ?? undefined))
             return { action: "update" } as const;
           if (envName !== output.name) return { action: "update" } as const;
-          return undefined;
+          return;
         }
 
-        if (olds !== undefined && hasUnresolvedInputs(olds)) return undefined;
+        if (!olds) return;
+        if (!isResolved(olds)) return;
 
-        if (
-          olds !== undefined &&
-          !hasUnresolvedInputs(olds) &&
-          projectId !== (olds as ResolvedEnvironmentProps).project.projectId
-        ) {
+        const oldProjectIdAccessor = yield* olds.project.projectId;
+        const oldProjectId = yield* oldProjectIdAccessor;
+
+        if (projectId !== oldProjectId) {
           return { action: "replace" } as const;
         }
-
-        return undefined;
       }),
       read: Effect.fn(function* ({ output }) {
-        if (!output?.environmentId) return undefined;
-        const engine = yield* DokployEngine;
-        const snap = yield* engine.findByEnvironmentId(output.environmentId);
-        return Option.getOrUndefined(snap);
+        if (!output) return;
+        const dokploy = yield* Dokploy;
+        const snap = yield* dokploy.environments.findById(output.environmentId);
+        if (Option.isNone(snap)) return;
+
+        return {
+          environmentId: snap.value.environmentId,
+          projectId: snap.value.projectId,
+          name: snap.value.name,
+          description: snap.value.description ?? undefined,
+        };
       }),
       reconcile: Effect.fn(function* ({ id, news, output }) {
-        if (news === undefined || hasUnresolvedInputs(news)) {
+        if (!isResolved(news)) {
           return yield* Effect.die(
             new Error("Crucible.Dokploy.Environment: unresolved props at reconcile"),
           );
         }
-        const props = news as ResolvedEnvironmentProps;
-        const engine = yield* DokployEngine;
-        const envName = props.name ?? id;
+        const dokploy = yield* Dokploy;
+        const envName = news.name ?? id;
+        const projectIdAccessor = yield* news.project.projectId;
+        const projectId = yield* projectIdAccessor;
 
-        return yield* engine.upsertEnvironment({
+        const updated = yield* dokploy.environments.upsert({
           environmentId: output?.environmentId,
-          projectId: props.project.projectId,
+          projectId: projectId,
           name: envName,
-          description: props.description,
+          description: news.description,
         });
+
+        if (Option.isNone(updated)) {
+          return yield* Effect.die(
+            new Error("Crucible.Dokploy.Environment: failed to update environment"),
+          );
+        }
+
+        return {
+          environmentId: updated.value.environmentId,
+          projectId: updated.value.projectId,
+          name: updated.value.name,
+          description: updated.value.description ?? undefined,
+        };
       }),
       delete: Effect.fn(function* ({ output }) {
         if (!output?.environmentId) return;
-        const engine = yield* DokployEngine;
-        yield* engine.deleteEnvironment(output.environmentId);
+        const dokploy = yield* Dokploy;
+        yield* dokploy.environments.delete(output.environmentId);
       }),
     })),
   );

@@ -73,14 +73,14 @@ const normalizeSpecForFingerprint = (
 
 export const applicationDomainsFingerprint = (
   domains: ReadonlyArray<ApplicationDomainProps> | undefined,
-): string => {
+) => Effect.gen(function* () {
   if (domains === undefined || domains.length === 0) return "[]";
   const normalized = [...domains].map((d) =>
     normalizeSpecForFingerprint(applicationDomainCorrelationKey(d), d),
   );
   normalized.sort((a, b) => String(a.key).localeCompare(String(b.key)));
   return JSON.stringify(normalized);
-};
+});
 
 export const toDomainCreatePayload = (
   applicationId: string,

@@ -1,0 +1,4052 @@
+[
+  {
+    "op": "replace",
+    "path": "/paths/~1admin.setupMonitoring/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1docker.getContainers/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1docker.restartContainer/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1docker.getConfig/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1docker.getContainersByAppNameMatch/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1docker.getContainersByAppLabel/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1docker.getStackContainersByAppName/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1docker.getServiceContainersByAppName/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.allForPermissions/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1project.duplicate/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.reload/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.stop/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.start/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.redeploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveEnvironment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveBuildType/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveGithubProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveGitlabProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveBitbucketProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveGiteaProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveDockerProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.saveGitProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.disconnectGitProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.markRunning/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.refreshToken/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.deploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.cleanQueues/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.clearDeployments/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.killBuild/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.readTraefikConfig/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1drop-deployment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.updateTraefikConfig/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.readAppMonitoring/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.move/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.cancelDeployment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1application.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.start/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.stop/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.saveExternalPort/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.deploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.changeStatus/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.reload/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.saveEnvironment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.move/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.rebuild/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mysql.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.start/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.stop/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.saveExternalPort/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.deploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.changeStatus/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.saveEnvironment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.reload/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.move/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.rebuild/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1postgres.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.start/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.reload/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.stop/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.saveExternalPort/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.deploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.changeStatus/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.saveEnvironment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.move/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.rebuild/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redis.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.start/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.stop/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.saveExternalPort/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.deploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.changeStatus/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.reload/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.saveEnvironment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.move/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.rebuild/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mongo.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.start/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.stop/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.saveExternalPort/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.deploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.changeStatus/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.saveEnvironment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.reload/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.move/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.rebuild/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mariadb.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.cleanQueues/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.clearDeployments/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.killBuild/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.loadServices/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.loadMountsByService/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.fetchSourceType/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.randomizeCompose/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.isolatedDeployment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.getConvertedCompose/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.deploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.redeploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.stop/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.start/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.getDefaultCommand/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.refreshToken/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.deployTemplate/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.templates/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.getTags/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.disconnectGitProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.move/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.processTemplate/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.import/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.cancelDeployment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1compose.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.get/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.haveRootAccess/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.getBackups/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.getServerMetrics/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.getUserByToken/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.getMetricsToken/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.assignPermissions/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.getInvitations/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.getContainerMetrics/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.generateToken/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.deleteApiKey/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.createApiKey/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.checkUserOrganizations/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1user.sendInvitation/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.byApplicationId/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.byComposeId/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.generateDomain/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.canGenerateTraefikMeDomains/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1domain.validateDomain/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1destination.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1destination.testConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1destination.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1destination.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1destination.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1destination.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.manualBackupPostgres/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.manualBackupMySql/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.manualBackupMariadb/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.manualBackupCompose/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.manualBackupMongo/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.manualBackupWebServer/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1backup.listBackupFiles/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1deployment.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1deployment.allByCompose/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1deployment.allByServer/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1deployment.allCentralized/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1deployment.queueList/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1deployment.allByType/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1deployment.killProcess/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1deployment.removeDeployment/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1previewDeployment.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1previewDeployment.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1previewDeployment.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1previewDeployment.redeploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mounts.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mounts.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mounts.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mounts.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mounts.allNamedByApplicationId/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1mounts.listByServiceId/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1certificates.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1certificates.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1certificates.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1certificates.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getWebServerSettings/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.reloadServer/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanRedis/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.reloadRedis/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanAllDeploymentQueue/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.reloadTraefik/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.toggleDashboard/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanUnusedImages/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanUnusedVolumes/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanStoppedContainers/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanDockerBuilder/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanDockerPrune/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanAll/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanMonitoring/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.saveSSHPrivateKey/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.assignDomainServer/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.cleanSSHPrivateKey/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateDockerCleanup/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.readTraefikConfig/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateTraefikConfig/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.readWebServerTraefikConfig/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateWebServerTraefikConfig/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.readMiddlewareTraefikConfig/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateMiddlewareTraefikConfig/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getUpdateData/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateServer/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getDokployVersion/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getReleaseTag/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.readDirectories/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateTraefikFile/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.readTraefikFile/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getIp/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateServerIp/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getOpenApiDocument/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.readTraefikEnv/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.writeTraefikEnv/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.haveTraefikDashboardPortEnabled/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.haveActivateRequests/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.toggleRequests/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.isCloud/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.isUserSubscribed/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.health/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.setupGPU/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.checkGPUStatus/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateTraefikPorts/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getTraefikPorts/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.updateLogCleanup/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getLogCleanupStatus/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1settings.getDokployCloudIps/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1security.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1security.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1security.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1security.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redirects.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redirects.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redirects.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1redirects.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1port.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1port.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1port.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1port.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1registry.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1registry.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1registry.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1registry.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1registry.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1registry.testRegistry/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1registry.testRegistryById/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1cluster.getNodes/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1cluster.removeWorker/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1cluster.addWorker/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1cluster.addManager/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createSlack/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateSlack/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testSlackConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createTelegram/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateTelegram/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testTelegramConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createDiscord/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateDiscord/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testDiscordConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createEmail/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateEmail/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testEmailConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createResend/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateResend/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testResendConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.receiveNotification/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createGotify/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateGotify/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testGotifyConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createNtfy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateNtfy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testNtfyConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createCustom/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateCustom/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testCustomConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createLark/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateLark/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testLarkConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createTeams/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updateTeams/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testTeamsConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.createPushover/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.updatePushover/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.testPushoverConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1notification.getEmailProviders/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sshKey.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sshKey.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sshKey.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sshKey.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sshKey.generate/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sshKey.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitProvider.getAll/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitProvider.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitea.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitea.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitea.giteaProviders/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitea.getGiteaRepositories/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitea.getGiteaBranches/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitea.testConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitea.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitea.getGiteaUrl/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1bitbucket.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1bitbucket.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1bitbucket.bitbucketProviders/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1bitbucket.getBitbucketRepositories/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1bitbucket.getBitbucketBranches/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1bitbucket.testConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1bitbucket.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitlab.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitlab.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitlab.gitlabProviders/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitlab.getGitlabRepositories/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitlab.getGitlabBranches/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitlab.testConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1gitlab.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1github.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1github.getGithubRepositories/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1github.getGithubBranches/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1github.githubProviders/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1github.testConnection/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1github.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.getDefaultCommand/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.count/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.withSSHKey/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.buildServers/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.setup/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.validate/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.security/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.setupMonitoring/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.publicIp/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.getServerTime/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1server.getServerMetrics/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1stripe.getCurrentPlan/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1stripe.getProducts/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1stripe.createCheckoutSession/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1stripe.createCustomerPortalSession/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1stripe.upgradeSubscription/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1stripe.canCreateMoreServers/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1stripe.getInvoices/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1swarm.getNodes/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1swarm.getNodeInfo/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1swarm.getNodeApps/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.getModels/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.getAll/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.get/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.suggest/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1ai.deploy/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.all/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.allInvitations/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.removeInvitation/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.updateMemberRole/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.setDefault/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1organization.active/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1licenseKey.activate/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1licenseKey.validate/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1licenseKey.deactivate/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1licenseKey.getEnterpriseSettings/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1licenseKey.haveValidLicenseKey/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1licenseKey.updateEnterpriseSettings/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.showSignInWithSSO/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.listProviders/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.getTrustedOrigins/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.deleteProvider/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.register/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.addTrustedOrigin/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.removeTrustedOrigin/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1sso.updateTrustedOrigin/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1schedule.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1schedule.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1schedule.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1schedule.list/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1schedule.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1schedule.runManually/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1rollback.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1rollback.rollback/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1volumeBackups.list/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1volumeBackups.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1volumeBackups.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1volumeBackups.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1volumeBackups.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1volumeBackups.runManually/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.byProjectId/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.remove/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.duplicate/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1environment.search/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.create/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.one/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.byEntityId/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.update/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.delete/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.toggleEnabled/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.ensureRepo/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.readRepoDirectories/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.readRepoFile/get/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.saveFileAsPatch/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.markFileForDeletion/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  },
+  {
+    "op": "replace",
+    "path": "/paths/~1patch.cleanPatchRepos/post/security",
+    "value": [
+      {
+        "apiKey": []
+      }
+    ]
+  }
+]

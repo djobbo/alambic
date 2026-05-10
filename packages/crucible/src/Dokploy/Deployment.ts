@@ -1,4 +1,4 @@
-import { hasUnresolvedInputs } from "alchemy/Diff";
+import { isResolved } from "alchemy/Diff";
 import type { InputProps } from "alchemy/Input";
 import * as Provider from "alchemy/Provider";
 import { Resource } from "alchemy/Resource";
@@ -47,26 +47,21 @@ export const DeploymentProvider = () =>
     Effect.sync(() => ({
       stables: [],
       diff: Effect.fn(function* ({ olds, news }) {
-        yield* Effect.void;
-        if (news === undefined || hasUnresolvedInputs(news)) return undefined;
-        const n = news as DeploymentStrategy;
-        if (olds === undefined || hasUnresolvedInputs(olds)) return undefined;
-        const o = olds as DeploymentStrategy;
-        return JSON.stringify(o) === JSON.stringify(n)
-          ? undefined
-          : ({ action: "update" } as const);
+        if (!isResolved(news)) return;
+        if (!isResolved(olds)) return;
+        if (JSON.stringify(olds) === JSON.stringify(news)) return;
+        return { action: "update" } as const;
       }),
       read: Effect.fn(function* ({ output }) {
-        yield* Effect.void;
         return output;
       }),
       reconcile: Effect.fn(function* ({ news }) {
-        if (news === undefined || hasUnresolvedInputs(news)) {
+        if (!isResolved(news)) {
           return yield* Effect.die(
             new Error("Crucible.Dokploy.Deployment: unresolved props at reconcile"),
           );
         }
-        return news as DeploymentStrategy;
+        return news;
       }),
       delete: Effect.fn(function* () {
         yield* Effect.void;
