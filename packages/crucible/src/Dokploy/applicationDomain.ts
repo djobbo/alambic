@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect";
-import type { DokployApplicationDomainSnapshot, DokployEngineShape } from "./DokployEngine.ts";
+import type { DokployDomainsClient } from "./Dokploy.ts";
+import type { DokployApplicationDomainSnapshot } from "./DokployEngine.ts";
 
 /**
  * Dokploy **application** domain (API `domain.create`), aligned with UI / DB schema.
@@ -73,14 +74,15 @@ const normalizeSpecForFingerprint = (
 
 export const applicationDomainsFingerprint = (
   domains: ReadonlyArray<ApplicationDomainProps> | undefined,
-) => Effect.gen(function* () {
-  if (domains === undefined || domains.length === 0) return "[]";
-  const normalized = [...domains].map((d) =>
-    normalizeSpecForFingerprint(applicationDomainCorrelationKey(d), d),
-  );
-  normalized.sort((a, b) => String(a.key).localeCompare(String(b.key)));
-  return JSON.stringify(normalized);
-});
+) =>
+  Effect.gen(function* () {
+    if (domains === undefined || domains.length === 0) return "[]";
+    const normalized = [...domains].map((d) =>
+      normalizeSpecForFingerprint(applicationDomainCorrelationKey(d), d),
+    );
+    normalized.sort((a, b) => String(a.key).localeCompare(String(b.key)));
+    return JSON.stringify(normalized);
+  });
 
 export const toDomainCreatePayload = (
   applicationId: string,
@@ -154,10 +156,10 @@ export const toDomainUpdatePayload = (
 
 /**
  * Reconcile Dokploy domains for **`attachApplicationId`** (typically the logical “active”
- * application returned from {@link DokployEngineShape.upsertDockerApplication}).
+ * application returned from `Dokploy` `applications.upsertDocker`).
  */
 export const syncApplicationDomains = (input: {
-  readonly engine: DokployEngineShape;
+  readonly domains: DokployDomainsClient;
   readonly desired: ReadonlyArray<ApplicationDomainProps>;
   readonly previous: ReadonlyArray<ApplicationDomainBinding> | undefined;
   readonly attachApplicationId: string;
@@ -169,11 +171,11 @@ export const syncApplicationDomains = (input: {
 
     for (const p of previous) {
       if (!desiredKeys.has(p.key)) {
-        yield* input.engine.deleteDomain(p.domainId);
+        yield* input.domains.deleteDomain(p.domainId);
       }
     }
 
-    const listed = yield* input.engine.listDomainsByApplicationId(input.attachApplicationId);
+    const listed = yield* input.domains.listDomainsByApplicationId(input.attachApplicationId);
     const snapshotByDomainId = new Map(listed.map((d) => [d.domainId, d] as const));
 
     const next: ApplicationDomainBinding[] = [];
@@ -183,12 +185,12 @@ export const syncApplicationDomains = (input: {
       let binding = prevByKey.get(key);
 
       if (binding !== undefined && binding.applicationId !== input.attachApplicationId) {
-        yield* input.engine.deleteDomain(binding.domainId);
+        yield* input.domains.deleteDomain(binding.domainId);
         binding = undefined;
       }
 
       if (binding === undefined) {
-        const row = yield* input.engine.createApplicationDomain(
+        const row = yield* input.domains.createApplicationDomain(
           toDomainCreatePayload(input.attachApplicationId, spec),
         );
         next.push({ key, domainId: row.domainId, applicationId: input.attachApplicationId });
@@ -197,7 +199,7 @@ export const syncApplicationDomains = (input: {
 
       const snap = snapshotByDomainId.get(binding.domainId);
       if (snap === undefined || !snapshotMatchesDesired(snap, spec)) {
-        yield* input.engine.updateApplicationDomain(toDomainUpdatePayload(binding.domainId, spec));
+        yield* input.domains.updateApplicationDomain(toDomainUpdatePayload(binding.domainId, spec));
       }
       next.push({ key, domainId: binding.domainId, applicationId: input.attachApplicationId });
     }

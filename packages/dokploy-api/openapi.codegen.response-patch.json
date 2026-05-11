@@ -65,7 +65,7 @@
     "value": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["applicationId", "appName", "name", "environmentId", "hasGitProviderAccess"],
+      "required": ["applicationId", "appName", "name", "environmentId"],
       "properties": {
         "applicationId": { "type": "string" },
         "appName": { "type": "string" },
@@ -311,11 +311,15 @@
   {
     "op": "replace",
     "path": "/paths/~1mounts.create/post/responses/200/content/application~1json/schema",
-    "value": { "$ref": "#/components/schemas/dokploy.mountLike" }
+    "value": {
+      "anyOf": [{ "$ref": "#/components/schemas/dokploy.mountLike" }, { "type": "boolean" }]
+    }
   },
   {
     "op": "replace",
     "path": "/paths/~1mounts.remove/post/responses/200/content/application~1json/schema",
-    "value": { "$ref": "#/components/schemas/dokploy.nullableMountLike" }
+    "value": {
+      "anyOf": [{ "$ref": "#/components/schemas/dokploy.nullableMountLike" }, { "type": "boolean" }]
+    }
   }
 ]

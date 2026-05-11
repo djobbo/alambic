@@ -5,11 +5,8 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Redacted from "effect/Redacted";
 
-import {
-  DokployConnection,
-  DokployEngine,
-  DokployEngineInMemoryLive,
-} from "../src/Dokploy/DokployEngine.ts";
+import { DokployEngine, DokployEngineInMemoryLive } from "../src/Dokploy/DokployEngine.ts";
+import { DokployConnection } from "@crucible/dokploy-api";
 
 /** Provides HTTP client + connection stubs so engine effects satisfy their declared requirements. */
 const dokployInMemoryTestLayer = Layer.mergeAll(
@@ -33,8 +30,6 @@ describe("DokployEngine in-memory", () => {
         appName: "web-app",
         dockerImage: "nginx:alpine",
         registry: undefined,
-        deployment: { mode: "native", kind: "restart" },
-        blueGreen: undefined,
       });
       const found = yield* engine.findByApplicationId(created.applicationId);
       return { created, found };
@@ -62,8 +57,6 @@ describe("DokployEngine in-memory", () => {
         appName: "svc",
         dockerImage: "nginx:alpine",
         registry: undefined,
-        deployment: { mode: "native", kind: "restart" },
-        blueGreen: undefined,
       });
       const v2 = yield* engine.upsertDockerApplication({
         applicationId: v1.applicationId,
@@ -73,8 +66,6 @@ describe("DokployEngine in-memory", () => {
         appName: "svc",
         dockerImage: "nginx:1.27",
         registry: undefined,
-        deployment: { mode: "native", kind: "restart" },
-        blueGreen: undefined,
       });
       return { v1, v2 };
     });
@@ -83,87 +74,6 @@ describe("DokployEngine in-memory", () => {
 
     expect(out.v2.applicationId).toBe(out.v1.applicationId);
     expect(out.v2.dockerImage).toBe("nginx:1.27");
-  });
-
-  test("blue-green automatic cutover flips active slot", async () => {
-    const program = Effect.gen(function* () {
-      const engine = yield* DokployEngine;
-      const v1 = yield* engine.upsertDockerApplication({
-        applicationId: undefined,
-        environmentId: "env-a",
-        serverId: undefined,
-        name: "web",
-        appName: "svc",
-        dockerImage: "nginx:alpine",
-        registry: undefined,
-        deployment: { mode: "blue-green", cutover: "automatic", initialSlot: "blue" },
-        blueGreen: undefined,
-      });
-      const v2 = yield* engine.upsertDockerApplication({
-        applicationId: v1.applicationId,
-        environmentId: "env-a",
-        serverId: undefined,
-        name: "web",
-        appName: "svc",
-        dockerImage: "nginx:1.27",
-        registry: undefined,
-        deployment: { mode: "blue-green", cutover: "automatic" },
-        blueGreen: {
-          activeSlot: v1.activeSlot,
-          blueApplicationId: v1.blueApplicationId,
-          greenApplicationId: v1.greenApplicationId,
-        },
-        compose: undefined,
-      });
-      return { v1, v2 };
-    });
-
-    const out = await Effect.runPromise(program.pipe(Effect.provide(dokployInMemoryTestLayer)));
-    expect(out.v1.activeSlot).toBe("green");
-    expect(out.v2.activeSlot).toBe("blue");
-    expect(out.v2.blueApplicationId).toBeDefined();
-    expect(out.v2.greenApplicationId).toBeDefined();
-    expect(out.v2.dockerImage).toBe("nginx:1.27");
-  });
-
-  test("blue-green manual cutover keeps active slot", async () => {
-    const program = Effect.gen(function* () {
-      const engine = yield* DokployEngine;
-      const v1 = yield* engine.upsertDockerApplication({
-        applicationId: undefined,
-        environmentId: "env-a",
-        serverId: undefined,
-        name: "web",
-        appName: "svc-manual",
-        dockerImage: "nginx:alpine",
-        registry: undefined,
-        deployment: { mode: "blue-green", cutover: "automatic", initialSlot: "blue" },
-        blueGreen: undefined,
-      });
-      const v2 = yield* engine.upsertDockerApplication({
-        applicationId: v1.applicationId,
-        environmentId: "env-a",
-        serverId: undefined,
-        name: "web",
-        appName: "svc-manual",
-        dockerImage: "nginx:1.27",
-        registry: undefined,
-        deployment: { mode: "blue-green", cutover: "manual" },
-        blueGreen: {
-          activeSlot: v1.activeSlot,
-          blueApplicationId: v1.blueApplicationId,
-          greenApplicationId: v1.greenApplicationId,
-        },
-        compose: undefined,
-      });
-      return { v1, v2 };
-    });
-
-    const out = await Effect.runPromise(program.pipe(Effect.provide(dokployInMemoryTestLayer)));
-    expect(out.v1.activeSlot).toBe("green");
-    expect(out.v2.activeSlot).toBe("green");
-    expect(out.v2.blueApplicationId).toBeDefined();
-    expect(out.v2.greenApplicationId).toBeDefined();
   });
 
   test("delete removes snapshot", async () => {
@@ -177,8 +87,6 @@ describe("DokployEngine in-memory", () => {
         appName: "gone",
         dockerImage: "alpine:3",
         registry: undefined,
-        deployment: { mode: "native", kind: "restart" },
-        blueGreen: undefined,
       });
       yield* engine.deleteApplication(created.applicationId);
       return yield* engine.findByApplicationId(created.applicationId);
@@ -228,8 +136,6 @@ describe("DokployEngine in-memory", () => {
         appName: "dom-app",
         dockerImage: "nginx:alpine",
         registry: undefined,
-        deployment: { mode: "native", kind: "restart" },
-        blueGreen: undefined,
       });
       const { domainId } = yield* engine.createApplicationDomain({
         applicationId: app.applicationId,
@@ -282,8 +188,6 @@ describe("DokployEngine in-memory", () => {
         appName: "dom-gone",
         dockerImage: "nginx:alpine",
         registry: undefined,
-        deployment: { mode: "native", kind: "restart" },
-        blueGreen: undefined,
       });
       yield* engine.createApplicationDomain({
         applicationId: app.applicationId,

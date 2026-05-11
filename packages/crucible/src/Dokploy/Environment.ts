@@ -35,11 +35,10 @@ export const EnvironmentProvider = () =>
     Effect.sync(() => ({
       stables: ["environmentId", "projectId"],
       diff: Effect.fn(function* ({ id, olds, news, output }) {
-        if (!isResolved(news)) return;
+        if (!news || !isResolved(news)) return;
 
         const envName = news.name ?? id;
-        const projectIdAccessor = yield* news.project.projectId;
-        const projectId = yield* projectIdAccessor;
+        const projectId = news.project.projectId;
 
         if (output) {
           if (projectId !== output.projectId) return { action: "replace" } as const;
@@ -49,11 +48,9 @@ export const EnvironmentProvider = () =>
           return;
         }
 
-        if (!olds) return;
-        if (!isResolved(olds)) return;
+        if (!olds || !isResolved(olds)) return;
 
-        const oldProjectIdAccessor = yield* olds.project.projectId;
-        const oldProjectId = yield* oldProjectIdAccessor;
+        const oldProjectId = olds.project.projectId;
 
         if (projectId !== oldProjectId) {
           return { action: "replace" } as const;
@@ -73,15 +70,14 @@ export const EnvironmentProvider = () =>
         };
       }),
       reconcile: Effect.fn(function* ({ id, news, output }) {
-        if (!isResolved(news)) {
+        if (!news || !isResolved(news)) {
           return yield* Effect.die(
             new Error("Crucible.Dokploy.Environment: unresolved props at reconcile"),
           );
         }
         const dokploy = yield* Dokploy;
         const envName = news.name ?? id;
-        const projectIdAccessor = yield* news.project.projectId;
-        const projectId = yield* projectIdAccessor;
+        const projectId = news.project.projectId;
 
         const updated = yield* dokploy.environments.upsert({
           environmentId: output?.environmentId,

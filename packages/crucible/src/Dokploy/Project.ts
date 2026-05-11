@@ -33,14 +33,15 @@ export const ProjectProvider = () =>
     Effect.sync(() => ({
       stables: ["projectId"],
       diff: Effect.fn(function* ({ id, news, output }) {
-        if (!isResolved(news)) return;
+        const next = news ?? {};
+        if (!isResolved(next)) return;
         if (!output) return;
 
-        if ((news.description ?? undefined) !== (output.description ?? undefined)) {
+        if ((next.description ?? undefined) !== (output.description ?? undefined)) {
           return { action: "update" } as const;
         }
 
-        const displayName = news.name ?? (yield* createPhysicalName({ id }));
+        const displayName = next.name ?? (yield* createPhysicalName({ id }));
         if (displayName !== output.name) {
           return { action: "update" } as const;
         }
@@ -58,18 +59,19 @@ export const ProjectProvider = () =>
         };
       }),
       reconcile: Effect.fn(function* ({ id, news, output }) {
-        if (!isResolved(news)) {
+        const next = news ?? {};
+        if (!isResolved(next)) {
           return yield* Effect.die(
             new Error("Crucible.Dokploy.Project: unresolved props at reconcile"),
           );
         }
         const dokploy = yield* Dokploy;
-        const displayName = news.name ?? (yield* createPhysicalName({ id }));
+        const displayName = next.name ?? (yield* createPhysicalName({ id }));
 
         const updated = yield* dokploy.projects.upsert({
           projectId: output?.projectId,
           name: displayName,
-          description: news.description,
+          description: next.description,
         });
 
         if (Option.isNone(updated)) {

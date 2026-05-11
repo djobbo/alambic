@@ -6,22 +6,17 @@ import * as Option from "effect/Option";
 import * as Redacted from "effect/Redacted";
 import * as Config from "effect/Config";
 import * as HttpClient from "effect/unstable/http/HttpClient";
-import { HttpClientError, isHttpClientError } from "effect/unstable/http/HttpClientError";
+import { HttpClientError } from "effect/unstable/http/HttpClientError";
 import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse";
-import * as Schema from "effect/Schema";
-import type { DeploymentStrategy } from "./types.ts";
 import { DokployApiError } from "./errors.ts";
-import { buildTraefikBlueGreenDynamicYaml } from "./traefikBlueGreen.ts";
 import {
-  expandComposeBlueGreenPlaceholder,
   mergeComposeEnvParts,
   restartComposeToSwarm,
   type DockerComposePort,
   type DockerComposeService,
   type DockerComposeVolume,
 } from "./dockerCompose.ts";
-
-export type DokployBlueGreenSlot = "blue" | "green";
+import { DokployConnection } from "@crucible/dokploy-api";
 
 /** Resolved snapshot returned by {@link DokployEngineShape.findByApplicationId}. */
 export interface DokployApplicationSnapshot {
@@ -31,9 +26,6 @@ export interface DokployApplicationSnapshot {
   readonly dockerImage: string;
   readonly environmentId: string;
   readonly serverId: string | undefined;
-  readonly activeSlot: DokployBlueGreenSlot | undefined;
-  readonly blueApplicationId: string | undefined;
-  readonly greenApplicationId: string | undefined;
 }
 
 export interface DokployProjectSnapshot {
@@ -80,14 +72,6 @@ export interface UpsertDockerApplicationInput {
         readonly registryUrl?: string;
       }
     | undefined;
-  readonly deployment: DeploymentStrategy;
-  readonly blueGreen:
-    | {
-        readonly activeSlot: DokployBlueGreenSlot | undefined;
-        readonly blueApplicationId: string | undefined;
-        readonly greenApplicationId: string | undefined;
-      }
-    | undefined;
   /**
    * Optional compose-shaped options (maps to Dokploy `saveEnvironment`, `application.update`,
    * and optional `port` / `mount` writes).
@@ -108,7 +92,7 @@ export interface UpsertEnvironmentInput {
   readonly description?: string;
 }
 
-type DokployEngineRequirements = DokployConnectionShape | HttpClient.HttpClient;
+type DokployEngineRequirements = DokployConnection | HttpClient.HttpClient;
 
 /** Dokploy automation facade — HTTP or in-memory (tests). Modeled as `Effect.Service` in `.repos/effect`. */
 export interface DokployEngineShape {
@@ -212,11 +196,6 @@ const responseBodyJsonUnknown = (
   response: HttpClientResponse.HttpClientResponse,
 ): Effect.Effect<unknown, HttpClientError, never> =>
   Effect.map(response.json, (body) => body as unknown);
-
-const oppositeSlot = (slot: DokployBlueGreenSlot): DokployBlueGreenSlot =>
-  slot === "blue" ? "green" : "blue";
-const slotAppName = (baseAppName: string, slot: DokployBlueGreenSlot): string =>
-  `${baseAppName}-${slot}`;
 
 /** Walk nested JSON for `applicationId` or Dokploy-style `id`. */
 const extractApplicationId = (body: unknown): string | undefined => {
@@ -471,12 +450,10 @@ const getApplicationJson = (applicationId: string) =>
 const optionalProjectJson = (projectId: string) =>
   Effect.gen(function* () {
     const api = yield* DokployApi;
-    return yield* api
-      .projectOne({ params: { projectId }, config: { includeResponse: true } })
-      .pipe(
-        Effect.map(([json]) => json),
-        Effect.catchTag("ProjectOne404", () => Effect.succeed(null)),
-      );
+    return yield* api.projectOne({ params: { projectId }, config: { includeResponse: true } }).pipe(
+      Effect.map(([json]) => json),
+      Effect.catchTag("ProjectOne404", () => Effect.succeed(null)),
+    );
   });
 
 const optionalEnvironmentJson = (environmentId: string) =>
@@ -671,10 +648,9 @@ const replaceApplicationMounts = (
 const applyComposeConfiguration = (
   applicationId: string,
   compose: DockerComposeService | undefined,
-  blueGreenSlot?: DokployBlueGreenSlot,
 ) =>
   Effect.gen(function* () {
-    const resolved = expandComposeBlueGreenPlaceholder(compose, blueGreenSlot);
+    const resolved = compose;
     if (resolved === undefined) return;
 
     const api = yield* DokployApi;
@@ -716,21 +692,12 @@ const applyComposeConfiguration = (
     }
   });
 
-const httpDeploy = (strategy: DeploymentStrategy, applicationId: string) =>
+const httpDeploy = (applicationId: string) =>
   Effect.gen(function* () {
     const api = yield* DokployApi;
-    yield* (
-      strategy.mode === "recreate"
-        ? sdk.applicationRedeploy({ payload: { applicationId } })
-        : sdk.applicationDeploy({ payload: { applicationId } })
-    ).pipe(
-      Effect.catch(
-        mapSdkFailure(
-          strategy.mode === "recreate" ? "/application.redeploy" : "/application.deploy",
-          "POST",
-        ),
-      ),
-    );
+    yield* api
+      .applicationDeploy({ payload: { applicationId } })
+      .pipe(Effect.catch(mapSdkFailure("/application.deploy", "POST")));
   });
 
 const syncProjectMetadata = (input: UpsertProjectInput, projectId: string) =>
@@ -790,75 +757,6 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
     upsertDockerApplication: (input) =>
       Effect.gen(function* () {
         yield* Effect.void;
-        if (input.deployment.mode === "blue-green") {
-          const priorActive = input.blueGreen?.activeSlot;
-          const activeSlot = priorActive ?? input.deployment.initialSlot ?? "blue";
-          const inactiveSlot = oppositeSlot(activeSlot);
-          const targetSlot =
-            input.deployment.cutover === "manual" && priorActive !== undefined
-              ? inactiveSlot
-              : inactiveSlot;
-
-          const ensureSlot = (
-            slot: DokployBlueGreenSlot,
-            id: string | undefined,
-            dockerImage: string,
-          ) => {
-            const applicationId = id ?? `mem-${slotAppName(input.appName, slot)}`;
-            const prev = apps.get(applicationId);
-            const snap: DokployApplicationSnapshot = {
-              applicationId,
-              name: `${input.name} (${slot})`,
-              appName: slotAppName(input.appName, slot),
-              dockerImage,
-              environmentId: input.environmentId,
-              serverId: input.serverId,
-              activeSlot: slot,
-              blueApplicationId:
-                slot === "blue" ? applicationId : input.blueGreen?.blueApplicationId,
-              greenApplicationId:
-                slot === "green" ? applicationId : input.blueGreen?.greenApplicationId,
-            };
-            apps.set(applicationId, { ...(prev ?? snap), ...snap });
-            return applicationId;
-          };
-
-          const existingBlue = input.blueGreen?.blueApplicationId;
-          const existingGreen = input.blueGreen?.greenApplicationId;
-          const blueApplicationId = ensureSlot(
-            "blue",
-            existingBlue,
-            targetSlot === "blue"
-              ? input.dockerImage
-              : (apps.get(existingBlue ?? "")?.dockerImage ?? input.dockerImage),
-          );
-          const greenApplicationId = ensureSlot(
-            "green",
-            existingGreen,
-            targetSlot === "green"
-              ? input.dockerImage
-              : (apps.get(existingGreen ?? "")?.dockerImage ?? input.dockerImage),
-          );
-
-          const nextActive =
-            input.deployment.cutover === "manual" && priorActive !== undefined
-              ? priorActive
-              : targetSlot;
-          const activeId = nextActive === "blue" ? blueApplicationId : greenApplicationId;
-          const active = apps.get(activeId)!;
-          const next: DokployApplicationSnapshot = {
-            ...active,
-            name: input.name,
-            appName: input.appName,
-            dockerImage: active.dockerImage,
-            activeSlot: nextActive,
-            blueApplicationId,
-            greenApplicationId,
-          };
-          apps.set(activeId, next);
-          return next;
-        }
-
         const existingId = input.applicationId;
         if (existingId && apps.has(existingId)) {
           const prev = apps.get(existingId)!;
@@ -869,9 +767,6 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
             dockerImage: input.dockerImage,
             environmentId: input.environmentId,
             serverId: input.serverId,
-            activeSlot: undefined,
-            blueApplicationId: undefined,
-            greenApplicationId: undefined,
           };
           apps.set(existingId, next);
           return next;
@@ -884,9 +779,6 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
           dockerImage: input.dockerImage,
           environmentId: input.environmentId,
           serverId: input.serverId,
-          activeSlot: undefined,
-          blueApplicationId: undefined,
-          greenApplicationId: undefined,
         };
         apps.set(applicationId, snap);
         return snap;
@@ -1112,233 +1004,173 @@ export const DokployEngineInMemoryLive = Layer.sync(DokployEngine, () => {
   return service;
 });
 
-/**
- * HTTP-backed engine targeting Dokploy `/api/application.*`, `/api/project.*`, `/api/environment.*`.
- */
+/** HTTP `/api/application.*` and `/api/domain.*` implementations (shared with the `Dokploy` service module). */
+export const dokployHttpApplicationsDomainLive: Pick<
+  DokployEngineShape,
+  | "upsertDockerApplication"
+  | "deleteApplication"
+  | "findByApplicationId"
+  | "listDomainsByApplicationId"
+  | "createApplicationDomain"
+  | "updateApplicationDomain"
+  | "deleteDomain"
+> = {
+  upsertDockerApplication: (input) =>
+    Effect.gen(function* () {
+      const upsertSingle = Effect.fn(function* ({
+        applicationId,
+        name,
+        appName,
+        dockerImage,
+      }: {
+        readonly applicationId: string | undefined;
+        readonly name: string;
+        readonly appName: string;
+        readonly dockerImage: string;
+      }) {
+        let nextId = applicationId;
+        const api = yield* DokployApi;
+        if (!nextId) {
+          const tup = yield* api
+            .applicationCreate({
+              payload: {
+                name,
+                appName,
+                environmentId: input.environmentId,
+                serverId: input.serverId ?? null,
+              },
+              config: { includeResponse: true },
+            })
+            .pipe(Effect.catch(mapSdkFailure("/application.create", "POST")));
+          const created = yield* responseBodyJsonUnknown(tup[1]);
+          nextId = extractApplicationId(created);
+          if (!nextId) {
+            return yield* Effect.fail(
+              new DokployApiError({
+                message:
+                  "application.create succeeded but no applicationId was found in the JSON body — check Dokploy API version",
+                body: created,
+              }),
+            );
+          }
+        }
+        const registryBody: Record<string, unknown> = {
+          applicationId: nextId,
+          dockerImage,
+        };
+        if (input.registry?.username) registryBody.username = input.registry.username;
+        if (input.registry?.password)
+          registryBody.password = Redacted.value(input.registry.password);
+        if (input.registry?.registryUrl) registryBody.registryUrl = input.registry.registryUrl;
+        yield* api
+          .applicationSaveDockerProvider({ payload: registryBody as never })
+          .pipe(Effect.catch(mapSdkFailure("/application.saveDockerProvider", "POST")));
+        yield* applyComposeConfiguration(nextId, input.compose);
+        yield* httpDeploy(nextId);
+        const json = yield* getApplicationJson(nextId);
+        return {
+          applicationId: nextId,
+          dockerImage: extractDockerImage(json) ?? dockerImage,
+        };
+      });
+
+      const single = yield* upsertSingle({
+        applicationId: input.applicationId,
+        name: input.name,
+        appName: input.appName,
+        dockerImage: input.dockerImage,
+      });
+      return {
+        applicationId: single.applicationId,
+        name: input.name,
+        appName: input.appName,
+        dockerImage: single.dockerImage,
+        environmentId: input.environmentId,
+        serverId: input.serverId,
+      } satisfies DokployApplicationSnapshot;
+    }),
+
+  deleteApplication: (applicationId) =>
+    Effect.gen(function* () {
+      const api = yield* DokployApi;
+      yield* api
+        .applicationDelete({ payload: { applicationId } })
+        .pipe(Effect.catch(mapSdkFailure("/application.delete", "POST")));
+    }),
+
+  findByApplicationId: (applicationId) =>
+    Effect.gen(function* () {
+      const json = yield* getApplicationJson(applicationId);
+      if (json === undefined) return Option.none<DokployApplicationSnapshot>();
+      const dockerImage = extractDockerImage(json) ?? "";
+      const name = extractStringField(json, "name") ?? applicationId;
+      const appName = extractStringField(json, "appName") ?? applicationId;
+      const environmentId = extractStringField(json, "environmentId") ?? "";
+
+      return Option.some<DokployApplicationSnapshot>({
+        applicationId,
+        name,
+        appName,
+        dockerImage,
+        environmentId,
+        serverId: undefined,
+      });
+    }),
+
+  listDomainsByApplicationId: (applicationId) =>
+    Effect.gen(function* () {
+      const json = yield* domainsByApplicationJson(applicationId);
+      return parseDomainsListJson(json ?? []);
+    }),
+
+  createApplicationDomain: (body) =>
+    Effect.gen(function* () {
+      const api = yield* DokployApi;
+      const tup = yield* api
+        .domainCreate({ payload: body as never, config: { includeResponse: true } })
+        .pipe(Effect.catch(mapSdkFailure("/domain.create", "POST")));
+      const created = yield* responseBodyJsonUnknown(tup[1]);
+      const domainId = extractDomainId(created);
+      if (!domainId) {
+        return yield* Effect.fail(
+          new DokployApiError({
+            message:
+              "domain.create succeeded but no domainId was found in the JSON body — check Dokploy API version",
+            body: created,
+          }),
+        );
+      }
+      return { domainId };
+    }),
+
+  updateApplicationDomain: (body) =>
+    Effect.gen(function* () {
+      const api = yield* DokployApi;
+      yield* api
+        .domainUpdate({ payload: body as never })
+        .pipe(Effect.catch(mapSdkFailure("/domain.update", "POST")));
+    }),
+
+  deleteDomain: (domainId) =>
+    Effect.gen(function* () {
+      const api = yield* DokployApi;
+      yield* api.domainDelete({ payload: { domainId } }).pipe(
+        Effect.catchTag("HttpClientError", (e: HttpClientError) =>
+          e.reason._tag === "StatusCodeError" && e.reason.response.status === 404
+            ? Effect.void
+            : Effect.fail(e),
+        ),
+        Effect.catch(mapSdkFailure("/domain.delete", "POST")),
+        Effect.asVoid,
+      );
+    }),
+};
+
+/** HTTP-backed engine targeting Dokploy `/api/application.*`, `/api/project.*`, `/api/environment.*`. */
 export const DokployEngineHttpLive = Layer.sync(
   DokployEngine,
   (): DokployEngineShape => ({
-    upsertDockerApplication: (input) =>
-      Effect.gen(function* () {
-        const upsertSingle = Effect.fn(function* ({
-          applicationId,
-          name,
-          appName,
-          dockerImage,
-          blueGreenSlot,
-        }: {
-          readonly applicationId: string | undefined;
-          readonly name: string;
-          readonly appName: string;
-          readonly dockerImage: string;
-          readonly blueGreenSlot?: DokployBlueGreenSlot;
-        }) {
-          let nextId = applicationId;
-          const api = yield* DokployApi;
-          if (!nextId) {
-            const tup = yield* api
-              .applicationCreate({
-                payload: {
-                  name,
-                  appName,
-                  environmentId: input.environmentId,
-                  serverId: input.serverId ?? null,
-                },
-                config: { includeResponse: true },
-              })
-              .pipe(Effect.catch(mapSdkFailure("/application.create", "POST")));
-            const created = yield* responseBodyJsonUnknown(tup[1]);
-            nextId = extractApplicationId(created);
-            if (!nextId) {
-              return yield* Effect.fail(
-                new DokployApiError({
-                  message:
-                    "application.create succeeded but no applicationId was found in the JSON body — check Dokploy API version",
-                  body: created,
-                }),
-              );
-            }
-          }
-          const registryBody: Record<string, unknown> = {
-            applicationId: nextId,
-            dockerImage,
-          };
-          if (input.registry?.username) registryBody.username = input.registry.username;
-          if (input.registry?.password)
-            registryBody.password = Redacted.value(input.registry.password);
-          if (input.registry?.registryUrl) registryBody.registryUrl = input.registry.registryUrl;
-          yield* api
-            .applicationSaveDockerProvider({ payload: registryBody as never })
-            .pipe(Effect.catch(mapSdkFailure("/application.saveDockerProvider", "POST")));
-          yield* applyComposeConfiguration(nextId, input.compose, blueGreenSlot);
-          yield* httpDeploy(input.deployment, nextId);
-          const json = yield* getApplicationJson(nextId);
-          return {
-            applicationId: nextId,
-            dockerImage: extractDockerImage(json) ?? dockerImage,
-          };
-        });
-
-        if (input.deployment.mode === "blue-green") {
-          const priorActive = input.blueGreen?.activeSlot;
-          const activeSlot = priorActive ?? input.deployment.initialSlot ?? "blue";
-          const inactiveSlot = oppositeSlot(activeSlot);
-          const targetSlot = inactiveSlot;
-          const keepActive = input.deployment.cutover === "manual" && priorActive !== undefined;
-
-          const activeIdBefore =
-            activeSlot === "blue"
-              ? input.blueGreen?.blueApplicationId
-              : input.blueGreen?.greenApplicationId;
-          const activeJsonBefore =
-            activeIdBefore !== undefined ? yield* getApplicationJson(activeIdBefore) : undefined;
-          const activeImageBefore = extractDockerImage(activeJsonBefore);
-
-          const blueResult =
-            targetSlot === "blue"
-              ? yield* upsertSingle({
-                  applicationId: input.blueGreen?.blueApplicationId,
-                  name: `${input.name} (blue)`,
-                  appName: slotAppName(input.appName, "blue"),
-                  dockerImage: input.dockerImage,
-                  blueGreenSlot: "blue",
-                })
-              : input.blueGreen?.blueApplicationId
-                ? {
-                    applicationId: input.blueGreen.blueApplicationId,
-                    dockerImage:
-                      activeSlot === "blue"
-                        ? (activeImageBefore ?? input.dockerImage)
-                        : input.dockerImage,
-                  }
-                : yield* upsertSingle({
-                    applicationId: undefined,
-                    name: `${input.name} (blue)`,
-                    appName: slotAppName(input.appName, "blue"),
-                    dockerImage:
-                      activeSlot === "blue"
-                        ? (activeImageBefore ?? input.dockerImage)
-                        : input.dockerImage,
-                    blueGreenSlot: "blue",
-                  });
-
-          const greenResult =
-            targetSlot === "green"
-              ? yield* upsertSingle({
-                  applicationId: input.blueGreen?.greenApplicationId,
-                  name: `${input.name} (green)`,
-                  appName: slotAppName(input.appName, "green"),
-                  dockerImage: input.dockerImage,
-                  blueGreenSlot: "green",
-                })
-              : input.blueGreen?.greenApplicationId
-                ? {
-                    applicationId: input.blueGreen.greenApplicationId,
-                    dockerImage:
-                      activeSlot === "green"
-                        ? (activeImageBefore ?? input.dockerImage)
-                        : input.dockerImage,
-                  }
-                : yield* upsertSingle({
-                    applicationId: undefined,
-                    name: `${input.name} (green)`,
-                    appName: slotAppName(input.appName, "green"),
-                    dockerImage:
-                      activeSlot === "green"
-                        ? (activeImageBefore ?? input.dockerImage)
-                        : input.dockerImage,
-                    blueGreenSlot: "green",
-                  });
-
-          const nextActiveSlot = keepActive ? activeSlot : targetSlot;
-          const activeResult = nextActiveSlot === "blue" ? blueResult : greenResult;
-
-          if (input.deployment.traefik !== undefined) {
-            const [blueJson, greenJson] = yield* Effect.all([
-              getApplicationJson(blueResult.applicationId),
-              getApplicationJson(greenResult.applicationId),
-            ]);
-            const yaml = buildTraefikBlueGreenDynamicYaml({
-              logicalAppSlug: input.appName,
-              baseAppName: input.appName,
-              traefik: input.deployment.traefik,
-              dokployAppNamesBySlot: {
-                blue: extractStringField(blueJson, "appName"),
-                green: extractStringField(greenJson, "appName"),
-              },
-            });
-            const sdkTraefik = yield* DokployApi;
-            yield* sdkTraefik
-              .applicationUpdateTraefikConfig({
-                payload: {
-                  applicationId: blueResult.applicationId,
-                  traefikConfig: yaml,
-                },
-              })
-              .pipe(Effect.catch(mapSdkFailure("/application.updateTraefikConfig", "POST")));
-          }
-
-          return {
-            applicationId: activeResult.applicationId,
-            name: input.name,
-            appName: input.appName,
-            dockerImage: activeResult.dockerImage,
-            environmentId: input.environmentId,
-            serverId: input.serverId,
-            activeSlot: nextActiveSlot,
-            blueApplicationId: blueResult.applicationId,
-            greenApplicationId: greenResult.applicationId,
-          } satisfies DokployApplicationSnapshot;
-        }
-
-        const single = yield* upsertSingle({
-          applicationId: input.applicationId,
-          name: input.name,
-          appName: input.appName,
-          dockerImage: input.dockerImage,
-        });
-        return {
-          applicationId: single.applicationId,
-          name: input.name,
-          appName: input.appName,
-          dockerImage: single.dockerImage,
-          environmentId: input.environmentId,
-          serverId: input.serverId,
-          activeSlot: undefined,
-          blueApplicationId: undefined,
-          greenApplicationId: undefined,
-        } satisfies DokployApplicationSnapshot;
-      }),
-
-    deleteApplication: (applicationId) =>
-      Effect.gen(function* () {
-        const api = yield* DokployApi;
-        yield* api
-          .applicationDelete({ payload: { applicationId } })
-          .pipe(Effect.catch(mapSdkFailure("/application.delete", "POST")));
-      }),
-
-    findByApplicationId: (applicationId) =>
-      Effect.gen(function* () {
-        const json = yield* getApplicationJson(applicationId);
-        if (json === undefined) return Option.none<DokployApplicationSnapshot>();
-        const dockerImage = extractDockerImage(json) ?? "";
-        const name = extractStringField(json, "name") ?? applicationId;
-        const appName = extractStringField(json, "appName") ?? applicationId;
-        const environmentId = extractStringField(json, "environmentId") ?? "";
-
-        return Option.some<DokployApplicationSnapshot>({
-          applicationId,
-          name,
-          appName,
-          dockerImage,
-          environmentId,
-          serverId: undefined,
-          activeSlot: undefined,
-          blueApplicationId: undefined,
-          greenApplicationId: undefined,
-        });
-      }),
+    ...dokployHttpApplicationsDomainLive,
 
     upsertProject: (input) =>
       Effect.gen(function* () {
@@ -1388,7 +1220,7 @@ export const DokployEngineHttpLive = Layer.sync(
     deleteProject: (projectId) =>
       Effect.gen(function* () {
         const api = yield* DokployApi;
-        yield* sdk.projectRemove({ payload: { projectId } }).pipe(
+        yield* api.projectRemove({ payload: { projectId } }).pipe(
           Effect.catchTag("HttpClientError", (e: HttpClientError) =>
             e.reason._tag === "StatusCodeError" && e.reason.response.status === 404
               ? Effect.void
@@ -1491,7 +1323,7 @@ export const DokployEngineHttpLive = Layer.sync(
     deleteEnvironment: (environmentId) =>
       Effect.gen(function* () {
         const api = yield* DokployApi;
-        yield* sdk.environmentRemove({ payload: { environmentId } }).pipe(
+        yield* api.environmentRemove({ payload: { environmentId } }).pipe(
           Effect.catchTag("HttpClientError", (e: HttpClientError) =>
             e.reason._tag === "StatusCodeError" && e.reason.response.status === 404
               ? Effect.void
@@ -1514,54 +1346,6 @@ export const DokployEngineHttpLive = Layer.sync(
       Effect.gen(function* () {
         const json = yield* environmentsByProjectJson(projectId);
         return parseEnvironmentListJson(json).filter((e) => e.projectId === projectId);
-      }),
-
-    listDomainsByApplicationId: (applicationId) =>
-      Effect.gen(function* () {
-        const json = yield* domainsByApplicationJson(applicationId);
-        return parseDomainsListJson(json ?? []);
-      }),
-
-    createApplicationDomain: (body) =>
-      Effect.gen(function* () {
-        const api = yield* DokployApi;
-        const tup = yield* api
-          .domainCreate({ payload: body as never, config: { includeResponse: true } })
-          .pipe(Effect.catch(mapSdkFailure("/domain.create", "POST")));
-        const created = yield* responseBodyJsonUnknown(tup[1]);
-        const domainId = extractDomainId(created);
-        if (!domainId) {
-          return yield* Effect.fail(
-            new DokployApiError({
-              message:
-                "domain.create succeeded but no domainId was found in the JSON body — check Dokploy API version",
-              body: created,
-            }),
-          );
-        }
-        return { domainId };
-      }),
-
-    updateApplicationDomain: (body) =>
-      Effect.gen(function* () {
-        const api = yield* DokployApi;
-        yield* api
-          .domainUpdate({ payload: body as never })
-          .pipe(Effect.catch(mapSdkFailure("/domain.update", "POST")));
-      }),
-
-    deleteDomain: (domainId) =>
-      Effect.gen(function* () {
-        const api = yield* DokployApi;
-        yield* sdk.domainDelete({ payload: { domainId } }).pipe(
-          Effect.catchTag("HttpClientError", (e: HttpClientError) =>
-            e.reason._tag === "StatusCodeError" && e.reason.response.status === 404
-              ? Effect.void
-              : Effect.fail(e),
-          ),
-          Effect.catch(mapSdkFailure("/domain.delete", "POST")),
-          Effect.asVoid,
-        );
       }),
   }),
 );

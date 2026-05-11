@@ -20,7 +20,7 @@ export class DokployConnection extends Context.Service<
     readonly baseUrl: string;
     readonly apiKey: Redacted.Redacted<string>;
   }
->()("@crucible/DokployConnection", {
+>()("@crucible/dokploy-api/DokployConnection", {
   make: Effect.gen(function* () {
     const apiKey = yield* Config.string("DOKPLOY_API_KEY");
     const baseUrl = yield* Config.string("DOKPLOY_URL");
@@ -33,26 +33,30 @@ export class DokployConnection extends Context.Service<
   static readonly layer = Layer.effect(this, this.make);
 }
 
-export class DokployApi extends Context.Service<DokployApi, Dokploy>()("@crucible/DokployApi", {
-  make: Effect.gen(function* () {
-    const { apiKey, baseUrl } = yield* DokployConnection;
-    const apiUrl = `${normalizeDokployBaseUrl(baseUrl)}/api`;
-    const client = (yield* HttpClient.HttpClient).pipe(
-      HttpClient.mapRequest(
-        flow(
-          HttpClientRequest.prependUrl(apiUrl),
-          HttpClientRequest.bearerToken(apiKey),
-          HttpClientRequest.acceptJson,
+export class DokployApi extends Context.Service<DokployApi, Dokploy>()(
+  "@crucible/dokploy-api/DokployApi",
+  {
+    make: Effect.gen(function* () {
+      const { apiKey, baseUrl } = yield* DokployConnection;
+      const apiUrl = `${normalizeDokployBaseUrl(baseUrl)}/api`;
+      const httpClient = yield* HttpClient.HttpClient;
+      const client = httpClient.pipe(
+        HttpClient.mapRequest(
+          flow(
+            HttpClientRequest.prependUrl(apiUrl),
+            HttpClientRequest.setHeader("x-api-key", Redacted.value(apiKey)),
+            HttpClientRequest.acceptJson,
+          ),
         ),
-      ),
-      HttpClient.filterStatusOk,
-      HttpClient.retryTransient({
-        schedule: Schedule.exponential(100),
-        times: 3,
-      }),
-    );
-    return makeDokployClient(client);
-  }),
-}) {
+        HttpClient.filterStatusOk,
+        HttpClient.retryTransient({
+          schedule: Schedule.exponential(100),
+          times: 3,
+        }),
+      );
+      return makeDokployClient(client);
+    }),
+  },
+) {
   static readonly layer = Layer.effect(this, this.make);
 }

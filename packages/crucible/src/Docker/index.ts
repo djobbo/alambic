@@ -1,11 +1,6 @@
-export type {
-  ComposeOutput,
-  ComposeProps,
-  ComposeServiceDefinition,
-  DockerComposeShape,
-} from "./Compose.ts";
+export type { ComposeOutput, ComposeProps, ComposeServiceDefinition } from "./Compose.ts";
 export { Compose, ComposeProvider, DockerCompose } from "./Compose.ts";
-export type { DockerImageShape, ImageProps } from "./Image.ts";
+export type { ImageProps } from "./Image.ts";
 export { DockerImage, ImageDigest, ImageProvider, ImageTag } from "./Image.ts";
 export type {
   NginxEnvironment,
