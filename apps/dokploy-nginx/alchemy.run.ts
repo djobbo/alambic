@@ -26,23 +26,24 @@ export default Alchemy.Stack(
       description: "this is quite a cool environment indeed!",
     });
     const publicHost = process.env.PUBLIC_HOST?.trim();
-    const domain = publicHost
-      ? yield* Dokploy.Domain("my-cool-domain", {
-          host: publicHost,
-          path: "/",
-          containerPort: 80,
-          internalPath: "/",
-          stripPath: false,
-          https: true,
-          certificateType: "letsencrypt",
-        })
-      : null;
+    if (!publicHost) {
+      return yield* Effect.die("PUBLIC_HOST is not set");
+    }
+    const domain = yield* Dokploy.Domain("my-cool-domain", {
+      host: publicHost,
+      path: "/",
+      containerPort: 80,
+      internalPath: "/",
+      stripPath: false,
+      https: true,
+      certificateType: "letsencrypt",
+    });
 
     const nginxImage = yield* Docker.NginxImageTag({ variant: "alpine" });
     const app = yield* Dokploy.Application.Image("my-cool-app", {
       environment,
       image: nginxImage,
-      domains: [domain].filter((d) => d !== null),
+      domains: [domain],
       service: {
         volumes: [
           {
@@ -55,30 +56,35 @@ export default Alchemy.Stack(
       },
     });
 
-    const domain2 = publicHost
-      ? yield* Dokploy.Domain("my-cool-domain-2", {
-          host: publicHost,
-          path: "/two",
-          containerPort: 80,
-          internalPath: "/",
-          stripPath: true,
-          https: true,
-          certificateType: "letsencrypt",
-        })
-      : null;
+    const workerDomain = yield* Dokploy.Domain("worker-domain", {
+      host: publicHost,
+      path: "/hello",
+      containerPort: 8080,
+      internalPath: "/",
+      stripPath: true,
+      https: true,
+      certificateType: "letsencrypt",
+    });
 
-    const app2 = yield* Dokploy.Application.Image("my-cool-app-2", {
+    const app2 = yield* Dokploy.Application.Worker("worker-app", {
       environment,
-      image: nginxImage,
-      domains: [domain2].filter((d) => d !== null),
+      domains: [workerDomain],
+      main: "./worker.ts",
     });
 
     return {
       projectId: project.projectId,
       environmentId: environment.environmentId,
-      applicationId: app.applicationId,
-      appName: app.appName,
-      dockerImage: app.dockerImage,
+      app: {
+        id: app.applicationId,
+        name: app.appName,
+        dockerImage: app.dockerImage,
+      },
+      worker: {
+        id: app2.applicationId,
+        name: app2.appName,
+        dockerImage: app2.dockerImage,
+      },
       publicHost,
     };
   }),

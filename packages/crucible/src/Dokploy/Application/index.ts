@@ -8,8 +8,10 @@ export type { ApplicationOutputs } from "./shared.ts";
 
 import { ApplicationCompose } from "./Compose.ts";
 import { ApplicationImage } from "./Image.ts";
+import { Worker as ApplicationWorker } from "../Worker.ts";
 
 export const Application = {
   Image: ApplicationImage,
   Compose: ApplicationCompose,
+  Worker: ApplicationWorker,
 } as const;

@@ -45,7 +45,8 @@
     "@crucible/dokploy-api": "workspace:*",
     "@effect/vitest": "catalog:",
     "alchemy": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "rolldown": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",

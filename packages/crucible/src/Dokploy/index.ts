@@ -8,6 +8,8 @@ export {
   applicationDomainsFingerprint,
 } from "./applicationDomain.ts";
 export * from "./Application/index.ts";
+export { Worker } from "./Worker.ts";
+export type { WorkerProps } from "./Worker.ts";
 export type {
   DokployApplicationDomainSnapshot,
   DokployApplicationSnapshot,

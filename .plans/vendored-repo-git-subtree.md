@@ -10,8 +10,10 @@ Currently tracked:
 
 | Prefix           | Upstream                                                          | Branch   |
 | ---------------- | ----------------------------------------------------------------- | -------- |
+| `.repos/alchemy` | [alchemy-run/alchemy](https://github.com/alchemy-run/alchemy)     | `main`   |
 | `.repos/dokploy` | [dokploy/dokploy](https://github.com/dokploy/dokploy)             | `canary` |
 | `.repos/effect`  | [Effect-TS/effect-smol](https://github.com/Effect-TS/effect-smol) | `main`   |
+| `.repos/workerd` | [cloudflare/workerd](https://github.com/cloudflare/workerd)       | `main`   |
 
 ## Prerequisites
 

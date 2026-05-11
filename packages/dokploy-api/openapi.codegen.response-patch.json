@@ -301,7 +301,9 @@
   {
     "op": "replace",
     "path": "/paths/~1port.create/post/responses/200/content/application~1json/schema",
-    "value": { "$ref": "#/components/schemas/dokploy.portLike" }
+    "value": {
+      "anyOf": [{ "$ref": "#/components/schemas/dokploy.portLike" }, { "type": "boolean" }]
+    }
   },
   {
     "op": "replace",
