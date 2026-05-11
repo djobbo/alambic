@@ -1,0 +1,96 @@
+// Copyright (c) 2017-2022 Cloudflare, Inc.
+// Licensed under the Apache 2.0 license found in the LICENSE file or at:
+//     https://opensource.org/licenses/Apache-2.0
+import { createRequire, isBuiltin, builtinModules } from 'node:module';
+import { ok, strictEqual, throws } from 'node:assert';
+
+export const doTheTest = {
+  async test() {
+    const require = createRequire('/');
+    ok(typeof require === 'function');
+
+    const foo = require('foo');
+    const bar = require('bar');
+    const baz = require('baz');
+    const qux = require('worker/qux');
+
+    // When require_returns_default_export flag is enabled, require() returns the
+    // default export directly. Otherwise it returns the namespace object.
+    if (Cloudflare.compatibilityFlags.require_returns_default_export) {
+      strictEqual(foo, 1);
+    } else {
+      strictEqual(foo.default, 1);
+    }
+    strictEqual(bar, 2);
+    strictEqual(baz, 3);
+    strictEqual(qux, '4');
+
+    const assert = await import('node:assert');
+    const required = require('node:assert');
+
+    // When require_returns_default_export flag is enabled, require() returns the
+    // default export directly (assert.default === required).
+    // When the flag is disabled, require() returns the namespace (assert === required).
+    if (Cloudflare.compatibilityFlags.require_returns_default_export) {
+      strictEqual(assert.default, required);
+    } else {
+      strictEqual(assert, required);
+    }
+
+    throws(() => require('invalid'), {
+      message: 'Top-level await in module is not permitted at this time.',
+    });
+    // Trying to require the module again should throw the same error.
+    throws(() => require('invalid'), {
+      message: 'Top-level await in module is not permitted at this time.',
+    });
+    throws(() => require('invalid2'), {
+      message: 'Top-level await in module is not permitted at this time.',
+    });
+
+    throws(() => require('does not exist'));
+    throws(() => createRequire('not a valid path'), {
+      message: /The argument must be a file URL object/,
+    });
+    throws(() => createRequire(new URL('http://example.org')), {
+      message: /The argument must be a file URL object/,
+    });
+
+    // TODO(soon): Later when we when complete the new module registry, query strings
+    // and hash fragments will be allowed when the new registry is being used.
+    throws(() => createRequire('file://test?abc'), {
+      message:
+        'The specifier must not have query string parameters or hash fragments.',
+    });
+    throws(() => createRequire('file://test#123'), {
+      message:
+        'The specifier must not have query string parameters or hash fragments.',
+    });
+
+    // These should not throw...
+    createRequire('file:///');
+    createRequire('file:///tmp');
+    createRequire(new URL('file:///'));
+  },
+};
+
+export const isBuiltinTest = {
+  test() {
+    ok(isBuiltin('fs'));
+    ok(isBuiltin('http'));
+    ok(isBuiltin('https'));
+    ok(isBuiltin('path'));
+    ok(isBuiltin('node:fs'));
+    ok(isBuiltin('node:http'));
+    ok(isBuiltin('node:https'));
+    ok(isBuiltin('node:path'));
+    ok(isBuiltin('node:test'));
+    ok(!isBuiltin('test'));
+    ok(!isBuiltin('worker'));
+    ok(!isBuiltin('worker/qux'));
+
+    builtinModules.forEach((module) => {
+      ok(isBuiltin(module));
+    });
+  },
+};

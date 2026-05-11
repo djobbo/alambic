@@ -1,0 +1,21 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "module-create-require-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "module-create-require-test.js"),
+          (name = "foo", esModule = "export default 1;"),
+          (name = "bar", esModule = "export default 2; export const __cjsUnwrapDefault = true;"),
+          (name = "baz", commonJsModule = "module.exports = 3;"),
+          (name = "worker/qux", text = "4"),
+          (name = "invalid", esModule = "await new Promise(() => {});"),
+          (name = "invalid2", commonJsModule = "require('invalid3');"),
+          (name = "invalid3", esModule = "await new Promise(() => {});"),
+        ],
+        compatibilityFlags = ["disable_top_level_await_in_require", "nodejs_compat_v2"]
+      )
+    ),
+  ],
+);

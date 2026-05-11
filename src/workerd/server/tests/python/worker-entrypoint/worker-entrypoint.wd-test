@@ -1,0 +1,21 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const config :Workerd.Config = (
+  services = [
+    (name = "main", worker = .mainWorker),
+    (name = "TEST_TMPDIR", disk = (writable = true)),
+  ],
+);
+
+const mainWorker :Workerd.Worker = (
+
+  compatibilityFlags = [%PYTHON_FEATURE_FLAGS, "rpc", "disable_python_no_global_handlers"],
+
+  modules = [
+    (name = "worker.py", pythonModule = embed "worker.py"),
+  ],
+
+  bindings = [
+    (name = "entrypoint", service = (name = "main", entrypoint = "WorkerEntrypointExample")),
+  ],
+);

@@ -1,0 +1,97 @@
+load("//:build/kj_test.bzl", "kj_test")
+load("//:build/wd_cc_library.bzl", "wd_cc_library")
+
+wd_cc_library(
+    name = "exceptions",
+    srcs = [
+        "exceptions.c++",
+    ],
+    hdrs = [
+        "exceptions.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/jsg",
+    ],
+)
+
+wd_cc_library(
+    name = "node",
+    srcs = [
+        "async-hooks.c++",
+        "crypto.c++",
+        "crypto-keys.c++",
+        "diagnostics-channel.c++",
+        "module.c++",
+        "process.c++",
+        "timers.c++",
+        "util.c++",
+        "zlib-util.c++",
+    ],
+    hdrs = [
+        "async-hooks.h",
+        "crypto.h",
+        "diagnostics-channel.h",
+        "module.h",
+        "node.h",
+        "process.h",
+        "timers.h",
+        "util.h",
+        "zlib-util.h",
+    ],
+    implementation_deps = [
+        "@capnp-cpp//src/kj/compat:kj-gzip",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":node-core",
+        "//src/node",
+        "//src/rust/api",
+        "//src/workerd/api:streams-compression",
+        "//src/workerd/io",
+        "//src/workerd/util:mimetype",
+        "@capnp-cpp//src/kj/compat:kj-brotli",
+        "@ncrypto",
+        "@zstd",
+    ],
+)
+
+# node source files that don't depend on io.
+wd_cc_library(
+    name = "node-core",
+    srcs = [
+        "buffer.c++",
+        "i18n.c++",
+        "sqlite.c++",
+        "url.c++",
+    ],
+    hdrs = [
+        "buffer.h",
+        "buffer-string-search.h",
+        "i18n.h",
+        "node-version.h",
+        "sqlite.h",
+        "url.h",
+    ],
+    implementation_deps = [
+        "//src/rust/cxx-integration",
+        "//src/rust/net",
+        "@ada-url",
+        "@nbytes",
+        "@simdutf",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        # Please do not add //src/workerd/io here – this target is intended for code that does not
+        # depend on it, move files to the main node target if needed. That way, the files here don't
+        # need to be rebuilt if there are changes to io.
+        "//src/workerd/io:compatibility-date_capnp",
+        "//src/workerd/jsg",
+        ":exceptions",
+    ],
+)
+
+kj_test(
+    src = "buffer-test.c++",
+    deps = ["//src/workerd/tests:test-fixture"],
+)

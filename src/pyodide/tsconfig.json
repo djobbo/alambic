@@ -1,0 +1,18 @@
+{
+  "extends": "../../tools/base.tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "paths": {
+      "pyodide:*": ["./*"],
+      "pyodide-internal:*": ["./internal/*", "./types/*"],
+      "internal:*": ["./types/*"],
+      "cloudflare-internal:*": ["./types/cloudflare-internal/*"]
+    },
+    "typeRoots": ["./types"],
+    "noEmit": false,
+    "noEmitOnError": false,
+    "allowArbitraryExtensions": true
+  },
+  "include": ["./**/*"],
+  "exclude": ["./**/generated/**/*", "node_modules", "**/*.mjs"]
+}

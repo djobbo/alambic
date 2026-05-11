@@ -1,0 +1,35 @@
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_rust//rust:defs.bzl", "rust_static_library")
+
+# Adds missing symbols following Rust mangling change, plus missing system library on Windows.
+cc_library(
+    name = "runtime",
+    linkopts = select({
+        "@platforms//os:windows": [
+            "ntdll.lib",
+        ],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":empty_lib"],
+)
+
+write_file(
+    name = "lib_rs",
+    out = "lib.rs",
+    tags = ["manual"],
+)
+
+rust_static_library(
+    name = "empty_lib",
+    srcs = [":lib.rs"],
+    # When stamping is enabled this will be replaced by the corresponding
+    # value in ./bazel-out/volatile-status.txt
+    rustc_env = {
+        "WORKERD_VERSION": "{WORKERD_VERSION}",
+    },
+    stamp = -1,  # default to bazel --stamp flag
+    tags = ["manual"],
+)

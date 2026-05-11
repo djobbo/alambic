@@ -1,0 +1,180 @@
+// Copyright (c) 2017-2022 Cloudflare, Inc.
+// Licensed under the Apache 2.0 license found in the LICENSE file or at:
+//     https://opensource.org/licenses/Apache-2.0
+
+#pragma once
+
+#include <workerd/util/strong-bool.h>
+
+#include <v8-local-handle.h>
+
+#include <kj/common.h>
+#include <kj/exception.h>
+#include <kj/string.h>
+
+// Forward declare v8::Isolate here, this allows us to avoid including the V8 header and compile
+// some targets without depending on V8.
+namespace v8 {
+class Isolate;
+}
+
+namespace workerd::jsg {
+
+class Url;
+
+struct ResolveObserver {
+  virtual ~ResolveObserver() noexcept(false) {}
+
+  // Identifies the context in which a module resolution is being performed.
+  enum class Context {
+    // The resolve is being performed by a worker bundle module
+    // (that is, a worker script is calling import or require).
+    BUNDLE,
+    // The resolve is being performed by a builtin module
+    // (that is, one of the modules built into the worker runtime).
+    BUILTIN,
+    // Like builtin, but it's a module that is *only* resolvable from a builtin
+    // (like the `node-internal:...` modules)
+    BUILTIN_ONLY,
+    // Resolves only user-importable built-in modules (the kBuiltin bundle),
+    // excluding both worker bundle modules and internal-only modules. Used
+    // by user-facing APIs like process.getBuiltinModule() that must not
+    // expose internal modules or return user bundle overrides.
+    PUBLIC_BUILTIN,
+  };
+
+  enum class Source {
+    // The resolve originated from a static import statement.
+    STATIC_IMPORT,
+    // The resolve originated from a dynamic import statement.
+    DYNAMIC_IMPORT,
+    // The resolve originated from a CommonJS require() call.
+    REQUIRE,
+    // The resolve originated from an internal direct call to
+    // the ModuleRegistry.
+    INTERNAL,
+  };
+
+  // Used to report the status of a module resolution.
+  class ResolveStatus {
+   public:
+    ResolveStatus() = default;
+    KJ_DISALLOW_COPY_AND_MOVE(ResolveStatus);
+    virtual ~ResolveStatus() noexcept(false) {}
+
+    // Indicates that the module resolution was successful and a
+    // matching module was found in the registry.
+    virtual void found() {}
+
+    // Indicates that the module resolution failed because no matching
+    // module was found in the registry.
+    virtual void notFound() {}
+
+    // Indicates that the module resolution failed because an error
+    // occurred.
+    virtual void exception(kj::Exception&& exception) {}
+  };
+
+  // Called when a module is being resolved. The returned ResolveStatus
+  // object will be used to report the result of the resolution.
+  // It is guaranteed that isolate lock is not held during invocation.
+  virtual kj::Own<ResolveStatus> onResolveModule(
+      const Url& specifier, Context context, Source source) const {
+    static ResolveStatus nonopStatus;
+    return {&nonopStatus, kj::NullDisposer::instance};
+  }
+
+  // Called when a module is being resolved. The returned ResolveStatus
+  // object will be used to report the result of the resolution.
+  // It is guaranteed that isolate lock is not held during invocation.
+  virtual kj::Own<ResolveStatus> onResolveModule(
+      kj::StringPtr specifier, Context context, Source source) const {
+    static ResolveStatus nonopStatus;
+    return {&nonopStatus, kj::NullDisposer::instance};
+  }
+};
+
+struct CompilationObserver {
+  virtual ~CompilationObserver() noexcept(false) {}
+
+  // see ModuleInfoCompileOption
+  enum class Option { BUNDLE, BUILTIN };
+
+  // Monitors behavior of compilation processes.
+
+  // Called at the start of ESM compilation.
+  // Returned value will be destroyed when module compilation finishes.
+  // It is guaranteed that isolate lock is held during invocation.
+  virtual kj::Own<void> onEsmCompilationStart(
+      v8::Isolate* isolate, kj::StringPtr name, Option option) const {
+    return kj::Own<void>();
+  }
+
+  // Called at the start of Script (e.g. non-ESM) compilation.
+  // Returned value will be destroyed when module compilation finishes.
+  // It is guaranteed that isolate lock is held during invocation.
+  virtual kj::Own<void> onScriptCompilationStart(
+      v8::Isolate* isolate, kj::Maybe<kj::StringPtr> name = kj::none) const {
+    return kj::Own<void>();
+  }
+
+  // Called at the start of wasm compilation.
+  // Returned value will be destroyed when module compilation finishes.
+  // It is guaranteed that isolate lock is held during invocation.
+  virtual kj::Own<void> onWasmCompilationStart(v8::Isolate* isolate, size_t codeSize) const {
+    return kj::Own<void>();
+  }
+
+  // Variation that is called at the start of wasm compilation from cache.
+  // Returned value will be destroyed when module compilation finishes.
+  // It is guaranteed that isolate lock is held during invocation.
+  virtual kj::Own<void> onWasmCompilationFromCacheStart(v8::Isolate* isolate) const {
+    return kj::Own<void>();
+  }
+
+  // Called at the start of json module parsing.
+  // Returned value will be destroyed when parsing completes.
+  // It is guaranteed that isolate lock is held during invocation.
+  virtual kj::Own<void> onJsonCompilationStart(v8::Isolate* isolate, size_t inputSize) const {
+    return kj::Own<void>();
+  }
+
+  virtual void onCompileCacheFound(v8::Isolate* isolate) const {}
+  virtual void onCompileCacheRejected(v8::Isolate* isolate) const {}
+  virtual void onCompileCacheGenerated(v8::Isolate* isolate) const {}
+  virtual void onCompileCacheGenerationFailed(v8::Isolate* isolate) const {}
+};
+
+struct InternalExceptionObserver {
+  virtual ~InternalExceptionObserver() noexcept(false) {}
+
+  struct Detail {
+    bool isInternal;
+    bool isFromRemote;
+    bool isDurableObjectReset;
+    using InternalErrorId = kj::FixedArray<char, 24>;
+    kj::Maybe<InternalErrorId> internalErrorId;
+  };
+
+  // Called when an internal exception is created (see exceptionToJs).
+  // Used to collect metrics on various internal error conditions.
+  virtual void reportInternalException(const kj::Exception&, Detail detail) {}
+};
+
+WD_STRONG_BOOL(IsCodeLike);
+
+struct IsolateObserver: public CompilationObserver,
+                        public InternalExceptionObserver,
+                        public ResolveObserver {
+  virtual ~IsolateObserver() noexcept(false) {}
+
+  // Called when eval(), new Function(), or similar dynamic code generation
+  // is performed. Note that the source here may not be a string if isCodeLike
+  // is YES.
+  virtual void onDynamicEval(
+      v8::Local<v8::Context> context, v8::Local<v8::Value> source, IsCodeLike isCodeLike) {
+    // Default is to do nothing.
+  }
+};
+
+}  // namespace workerd::jsg

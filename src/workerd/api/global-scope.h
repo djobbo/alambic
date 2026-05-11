@@ -1,0 +1,1094 @@
+// Copyright (c) 2017-2022 Cloudflare, Inc.
+// Licensed under the Apache 2.0 license found in the LICENSE file or at:
+//     https://opensource.org/licenses/Apache-2.0
+
+#pragma once
+
+#include "basics.h"
+#include "filesystem.h"
+#include "http.h"
+#include "messagechannel.h"
+#include "performance.h"
+
+#include <workerd/api/hibernation-event-params.h>
+#ifdef WORKERD_FUZZILLI
+#include "unsafe.h"
+
+#include <workerd/api/fuzzilli.h>
+#endif
+
+#include <workerd/io/features.h>
+#include <workerd/io/io-timers.h>
+#include <workerd/jsg/jsg.h>
+
+namespace workerd::jsg {
+class DOMException;
+}  // namespace workerd::jsg
+
+namespace workerd::api {
+
+class Tracing;
+class TailEvent;
+class Cache;
+class CacheStorage;
+class JsRpcProperty;
+class Crypto;
+class CryptoKey;
+class ErrorEvent;
+class EventSource;
+class FixedLengthStream;
+class SubtleCrypto;
+class TextDecoder;
+class TextEncoder;
+class HTMLRewriter;
+class IdentityTransformStream;
+class Response;
+class TraceItem;
+class TransformStream;
+class ScheduledController;
+class ScheduledEvent;
+class ReadableStream;
+class ReadableStreamDefaultReader;
+class ReadableStreamBYOBReader;
+class ReadableStreamBYOBRequest;
+class WritableStream;
+class WritableStreamDefaultWriter;
+class ReadableStreamBYOBRequest;
+class ReadableStreamDefaultController;
+class ReadableByteStreamController;
+class WritableStreamDefaultController;
+class CompressionStream;
+class DecompressionStream;
+class TextEncoderStream;
+class TextDecoderStream;
+class Blob;
+class File;
+class FormData;
+
+class URLPattern;
+namespace urlpattern {
+class URLPattern;
+}  // namespace urlpattern
+
+class URL;
+class URLSearchParams;
+namespace url {
+class URL;
+class URLSearchParams;
+}  // namespace url
+
+// We need access to DOMException within this namespace so JSG_NESTED_TYPE can name it correctly.
+using DOMException = jsg::DOMException;
+
+// A subset of the standard Navigator API.
+class Navigator: public jsg::Object {
+ public:
+  kj::StringPtr getUserAgent() {
+    return "Cloudflare-Workers"_kj;
+  }
+
+  bool sendBeacon(jsg::Lock& js, kj::String url, jsg::Optional<Body::Initializer> body);
+
+  kj::uint getHardwareConcurrency() {
+    // Workers does not expose hardware concurrency to users.
+    // From the user code perspective there's only one core.
+    return 1;
+  }
+
+  kj::StringPtr getPlatform() {
+    return ""_kj;
+  }
+
+  kj::StringPtr getLanguage() {
+    // Some packages depend on navigator.language being set to a specific value.
+    return "en"_kj;
+  }
+
+  kj::Array<kj::StringPtr> getLanguages() {
+    auto builder = kj::heapArrayBuilder<kj::StringPtr>(1);
+    builder.add("en"_kjc);
+    return builder.finish();
+  }
+
+  jsg::Ref<StorageManager> getStorage(jsg::Lock& js);
+
+  JSG_RESOURCE_TYPE(Navigator, CompatibilityFlags::Reader reader) {
+    JSG_METHOD(sendBeacon);
+    JSG_READONLY_INSTANCE_PROPERTY(userAgent, getUserAgent);
+    JSG_READONLY_INSTANCE_PROPERTY(hardwareConcurrency, getHardwareConcurrency);
+    JSG_READONLY_INSTANCE_PROPERTY(platform, getPlatform);
+
+    if (reader.getEnableNavigatorLanguage()) {
+      JSG_READONLY_INSTANCE_PROPERTY(language, getLanguage);
+      JSG_READONLY_INSTANCE_PROPERTY(languages, getLanguages);
+    }
+
+    if (reader.getWebFileSystem()) {
+      JSG_LAZY_READONLY_INSTANCE_PROPERTY(storage, getStorage);
+    }
+
+    JSG_TS_OVERRIDE({
+      sendBeacon(url: string, body?: BodyInit): boolean;
+    });
+  }
+};
+
+// Exposed as a global to provide access to certain Cloudflare-specific
+// configuration details. This is not a standard API and great care should
+// be taken when deciding to expose new properties or methods here.
+class Cloudflare: public jsg::Object {
+ public:
+  // Return an object containing the state of all compatibility flags known to the runtime.
+  jsg::JsObject getCompatibilityFlags(jsg::Lock& js);
+
+  JSG_RESOURCE_TYPE(Cloudflare) {
+    JSG_LAZY_READONLY_INSTANCE_PROPERTY(compatibilityFlags, getCompatibilityFlags);
+
+    JSG_TS_OVERRIDE({ readonly compatibilityFlags: Record<string, boolean>;
+    });
+  }
+};
+
+class WorkerGlobalScope: public EventTarget, public jsg::ContextGlobal {
+ public:
+  jsg::Unimplemented importScripts(kj::String s) {
+    return {};
+  };
+
+  JSG_RESOURCE_TYPE(WorkerGlobalScope, CompatibilityFlags::Reader flags) {
+    JSG_INHERIT(EventTarget);
+
+    // *** WARNING ***: *Every* new export here must be treated as a potentially
+    // breaking change. It doesn't matter if it's a new method, a new property,
+    // or a new nested type. Adding anything to the global scope risks breaking
+    // existing user code that is feature-sniffing or monkeypatching the global.
+    // *Always* add new exports behind a new compatibility flag! And when in
+    // doubt, don't add the new export on globalThis at all. The only things
+    // that should be exported on globalThis should be standardized web APIs or
+    // Node.js compat mode globals.
+
+    JSG_NESTED_TYPE(EventTarget);
+
+    if (!flags.getNoImportScripts()) {
+      JSG_METHOD(importScripts);
+    }
+
+    JSG_TS_DEFINE(type WorkerGlobalScopeEventMap = {
+      fetch: FetchEvent;
+      scheduled: ScheduledEvent;
+      queue: QueueEvent;
+      unhandledrejection: PromiseRejectionEvent;
+      rejectionhandled: PromiseRejectionEvent;
+    });
+    JSG_TS_OVERRIDE(extends EventTarget<WorkerGlobalScopeEventMap>);
+  }
+
+  // Because EventTarget has a constructor(), we have to explicitly delete
+  // the constructor() here or we'll end up with compilation errors
+  // (EventTarget's constructor confuses the hasConstructorMethod in resource.h)
+  static jsg::Ref<WorkerGlobalScope> constructor() = delete;
+};
+
+// Controller type for test handler.
+//
+// At present, this has no methods. It is defined for consistency with other handlers and on the
+// assumption that we'll probably want to put something here someday.
+class TestController: public jsg::Object {
+ public:
+  JSG_RESOURCE_TYPE(TestController) {}
+};
+
+// Structured types for the cache purge API (ctx.cache.purge()).
+// These match the coreless-purge-ingest WorkersCachePurgeEntrypoint types.
+// NOTE: TypeScript stubs for CachePurgeError, CachePurgeResult, CachePurgeOptions, and
+// CacheContext are manually maintained in src/cloudflare/internal/workers.d.ts. If you change
+// these types, update that file to match.
+struct CachePurgeError {
+  int code;
+  kj::String message;
+  JSG_STRUCT(code, message);
+};
+
+struct CachePurgeResult {
+  bool success;
+  kj::Array<CachePurgeError> errors;
+  JSG_STRUCT(success, errors);
+};
+
+struct CachePurgeOptions {
+  jsg::Optional<kj::Array<kj::String>> tags;
+  jsg::Optional<kj::Array<kj::String>> pathPrefixes;
+  jsg::Optional<bool> purgeEverything;
+  JSG_STRUCT(tags, pathPrefixes, purgeEverything);
+};
+
+// Base class for the ctx.cache object on cache enabled Workers.
+// Subclass when embedding to provide an implementation.
+class CacheContext: public jsg::Object {
+ public:
+  // Purge cached content.
+  //
+  // The default implementation throws without an overriding IoContext.
+  virtual jsg::Promise<CachePurgeResult> purge(jsg::Lock& js,
+      CachePurgeOptions options,
+      const jsg::TypeHandler<CachePurgeOptions>& optionsHandler,
+      const jsg::TypeHandler<CachePurgeResult>& resultHandler,
+      const jsg::TypeHandler<jsg::Ref<JsRpcProperty>>& rpcPropHandler);
+
+  JSG_RESOURCE_TYPE(CacheContext) {
+    JSG_METHOD(purge);
+  }
+};
+
+class ExecutionContext: public jsg::Object {
+ public:
+  ExecutionContext(jsg::Lock& js, jsg::JsValue exports)
+      : ExecutionContext(js, kj::mv(exports), /*props=*/js.obj(), /*versionInfo=*/kj::none) {}
+
+  ExecutionContext(jsg::Lock& js,
+      jsg::JsValue exports,
+      jsg::JsValue props,
+      kj::Maybe<Worker::VersionInfo> versionInfo)
+      : exports(js, exports),
+        props(js, props) {
+    auto featureFlags = FeatureFlags::get(js);
+    if (featureFlags.getEnableVersionApi()) {
+      version = kj::mv(versionInfo).map([&js, &featureFlags](auto v) {
+        return jsg::JsRef{js,
+          v.toJs(js,
+              featureFlags.getEnableCtxVersionMetadata() ? PopulateVersionInfoMetadata::YES
+                                                         : PopulateVersionInfoMetadata::NO)};
+      });
+    }
+  }
+
+  void waitUntil(kj::Promise<void> promise);
+  void passThroughOnException();
+
+  // Cancels the current execution context with the given exception, causing all execution to stop
+  // and throwing an error at the client.
+  void abort(jsg::Lock& js, jsg::Optional<jsg::Value> reason);
+
+  jsg::JsValue getExports(jsg::Lock& js) {
+    return exports.getHandle(js);
+  }
+
+  jsg::JsValue getProps(jsg::Lock& js) {
+    return props.getHandle(js);
+  }
+
+  // Returns a CacheContext for cache-enabled workers, or empty jsg::Optional otherwise.
+  // However, by default this always returns undefined unless the embedding application overrides
+  // the IoContext.
+  jsg::Optional<jsg::Ref<CacheContext>> getCache(jsg::Lock& js);
+
+  jsg::JsValue getVersion(jsg::Lock& js) {
+    // TODO(soon): We should be able to assert for `version != kj::none` in the constructor when the
+    //   `enable_version_api` compat flag is enabled, but currently dynamic workers and "reusable
+    //   `ctx` object instantiation" do not pass information to populate `ctx.version` with,
+    //   `ctx.version` is currently optional so we can return undefined for now.
+    KJ_IF_SOME(someVersion, version) {
+      return someVersion.getHandle(js);
+    }
+    return js.undefined();
+  }
+
+  jsg::Optional<jsg::Ref<Tracing>> getTracing(jsg::Lock& js);
+
+  JSG_RESOURCE_TYPE(ExecutionContext, CompatibilityFlags::Reader flags) {
+    JSG_METHOD(waitUntil);
+    JSG_METHOD(passThroughOnException);
+    if (flags.getEnableCtxExports()) {
+      JSG_LAZY_INSTANCE_PROPERTY(exports, getExports);
+    }
+    JSG_LAZY_INSTANCE_PROPERTY(props, getProps);
+    JSG_LAZY_INSTANCE_PROPERTY(cache, getCache);
+    if (flags.getEnableVersionApi()) {
+      JSG_LAZY_INSTANCE_PROPERTY(version, getVersion);
+    }
+
+    // ctx.tracing - user tracing API. The *type* is always visible (so the generated
+    // `Tracing` / `Span` types exist in every compat-date snapshot, not only the
+    // experimental one). The *value* is `undefined` outside the `workerdExperimental`
+    // compat flag - the gate lives in `getTracing()` in global-scope.c++.
+    // TODO: Remove this comment once the feature is stable.
+    JSG_LAZY_INSTANCE_PROPERTY(tracing, getTracing);
+
+    if (flags.getWorkerdExperimental()) {
+      // TODO(soon): Before making this generally available we need to:
+      // * Consider whether to use TerminateExecution() instead of throwing.
+      // * Make sure it's really not possible for more code to run in the context after abort().
+      //   Currently, abort() triggers in a partially async way so there's an opportunity for some
+      //   other event in the event queue to squeeze in.
+      // * Try to ensure that the provided error is actually the one that propagates out of event
+      //   handlers. Currently this is not consistently true.
+      // * Make sure all event handlers actually honor onAbort().
+      // * Enable the Durable Object version at the same time -- and make sure they're suitably
+      //   consistent with each other.
+      JSG_METHOD(abort);
+    }
+
+    // TODO(soon): This is getting unwieldy.
+    if (flags.getEnableCtxExports()) {
+      if (flags.getEnableVersionApi()) {
+        JSG_TS_OVERRIDE(<Props = unknown> {
+          readonly props: Props;
+          readonly exports: Cloudflare.Exports;
+          readonly version?: {
+            readonly metadata?: { readonly id: string; };
+            readonly cohort?: string;
+            readonly key?: string;
+            readonly override?: string;
+          };
+        });
+      } else {
+        JSG_TS_OVERRIDE(<Props = unknown> {
+          readonly props: Props;
+          readonly exports: Cloudflare.Exports;
+        });
+      }
+    } else {
+      if (flags.getEnableVersionApi()) {
+        JSG_TS_OVERRIDE(<Props = unknown> {
+          readonly props: Props;
+          readonly version?: {
+            readonly metadata?: { readonly id: string; };
+            readonly cohort?: string;
+            readonly key?: string;
+            readonly override?: string;
+          };
+        });
+      } else {
+        JSG_TS_OVERRIDE(<Props = unknown> {
+          readonly props: Props;
+        });
+      }
+    }
+  }
+
+  void visitForMemoryInfo(jsg::MemoryTracker& tracker) const {
+    tracker.trackField("props", props);
+    tracker.trackField("version", version);
+  }
+
+ private:
+  jsg::JsRef<jsg::JsValue> exports;
+  jsg::JsRef<jsg::JsValue> props;
+  kj::Maybe<jsg::JsRef<jsg::JsValue>> version;
+
+  void visitForGc(jsg::GcVisitor& visitor) {
+    visitor.visit(props);
+    visitor.visit(version);
+  }
+};
+
+// AlarmEventInfo is a jsg::Object used to pass alarm invocation info to an alarm handler.
+class AlarmInvocationInfo: public jsg::Object {
+ public:
+  AlarmInvocationInfo(kj::Date scheduledTime, uint32_t retry)
+      : scheduledTime(static_cast<double>((scheduledTime - kj::UNIX_EPOCH) / kj::MILLISECONDS)),
+        retryCount(retry) {}
+
+  bool getIsRetry() {
+    return retryCount > 0;
+  }
+  uint32_t getRetryCount() {
+    return retryCount;
+  }
+  double getScheduledTime() {
+    return scheduledTime;
+  }
+
+  JSG_RESOURCE_TYPE(AlarmInvocationInfo) {
+    JSG_READONLY_INSTANCE_PROPERTY(isRetry, getIsRetry);
+    JSG_READONLY_INSTANCE_PROPERTY(retryCount, getRetryCount);
+    JSG_READONLY_INSTANCE_PROPERTY(scheduledTime, getScheduledTime);
+  }
+
+ private:
+  double scheduledTime;
+  uint32_t retryCount = 0;
+};
+
+// Type signature for handlers exported from the root module.
+//
+// We define each handler method as a LenientOptional rather than as a plain Optional in order to
+// treat incorrect types as if the field is undefined. Without this, Durable Object class
+// constructors that set a field with one of these names would cause confusing type errors.
+struct ExportedHandler {
+  using FetchHandler = jsg::Promise<jsg::Ref<api::Response>>(jsg::Ref<api::Request> request,
+      jsg::Value env,
+      jsg::Optional<jsg::Ref<ExecutionContext>> ctx);
+  jsg::LenientOptional<jsg::Function<FetchHandler>> fetch;
+
+  using ConnectHandler = jsg::Promise<void>(
+      jsg::Ref<Socket> socket, jsg::Value env, jsg::Optional<jsg::Ref<ExecutionContext>> ctx);
+  jsg::LenientOptional<jsg::Function<ConnectHandler>> connect;
+
+  using TailHandler = kj::Promise<void>(kj::Array<jsg::Ref<TraceItem>> events,
+      jsg::Value env,
+      jsg::Optional<jsg::Ref<ExecutionContext>> ctx);
+  jsg::LenientOptional<jsg::Function<TailHandler>> tail;
+  jsg::LenientOptional<jsg::Function<TailHandler>> trace;
+
+  using TailStreamHandler = kj::Promise<void>(
+      jsg::JsObject obj, jsg::Value env, jsg::Optional<jsg::Ref<ExecutionContext>> ctx);
+  jsg::LenientOptional<jsg::Function<TailStreamHandler>> tailStream;
+
+  using ScheduledHandler = kj::Promise<void>(jsg::Ref<ScheduledController> controller,
+      jsg::Value env,
+      jsg::Optional<jsg::Ref<ExecutionContext>> ctx);
+  jsg::LenientOptional<jsg::Function<ScheduledHandler>> scheduled;
+
+  using AlarmHandler = kj::Promise<void>(jsg::Ref<AlarmInvocationInfo> alarmInfo);
+  // Alarms are only exported on DOs, which receive env bindings from the constructor
+  jsg::LenientOptional<jsg::Function<AlarmHandler>> alarm;
+
+  using TestHandler = jsg::Promise<void>(jsg::Ref<TestController> controller,
+      jsg::Value env,
+      jsg::Optional<jsg::Ref<ExecutionContext>> ctx);
+  jsg::LenientOptional<jsg::Function<TestHandler>> test;
+
+  using HibernatableWebSocketMessageHandler = kj::Promise<void>(
+      jsg::Ref<WebSocket>, kj::OneOf<kj::String, kj::Array<byte>> message);
+  jsg::LenientOptional<jsg::Function<HibernatableWebSocketMessageHandler>> webSocketMessage;
+
+  using HibernatableWebSocketCloseHandler = kj::Promise<void>(
+      jsg::Ref<WebSocket>, int code, kj::String reason, bool wasClean);
+  jsg::LenientOptional<jsg::Function<HibernatableWebSocketCloseHandler>> webSocketClose;
+
+  using HibernatableWebSocketErrorHandler = kj::Promise<void>(jsg::Ref<WebSocket>, jsg::Value);
+  jsg::LenientOptional<jsg::Function<HibernatableWebSocketErrorHandler>> webSocketError;
+
+  // Self-ref potentially allows extracting other custom handlers from the object.
+  jsg::SelfRef self;
+
+  JSG_STRUCT(fetch,
+      connect,
+      tail,
+      trace,
+      tailStream,
+      scheduled,
+      alarm,
+      test,
+      webSocketMessage,
+      webSocketClose,
+      webSocketError,
+      self);
+
+  JSG_STRUCT_TS_ROOT();
+  // ExportedHandler isn't included in the global scope, but we still want to
+  // include it in type definitions.
+
+  JSG_STRUCT_TS_DEFINE(
+    type ExportedHandlerFetchHandler<Env = unknown, CfHostMetadata = unknown, Props = unknown> = (request: Request<CfHostMetadata, IncomingRequestCfProperties<CfHostMetadata>>, env: Env, ctx: ExecutionContext<Props>) => Response | Promise<Response>;
+    type ExportedHandlerConnectHandler<Env = unknown, Props = unknown> = (socket: Socket, env: Env, ctx: ExecutionContext<Props>) => void | Promise<void>;
+    type ExportedHandlerTailHandler<Env = unknown, Props = unknown> = (events: TraceItem[], env: Env, ctx: ExecutionContext<Props>) => void | Promise<void>;
+    type ExportedHandlerTraceHandler<Env = unknown, Props = unknown> = (traces: TraceItem[], env: Env, ctx: ExecutionContext<Props>) => void | Promise<void>;
+    type ExportedHandlerTailStreamHandler<Env = unknown, Props = unknown> = (event : TailStream.TailEvent<TailStream.Onset>, env: Env, ctx: ExecutionContext<Props>) => TailStream.TailEventHandlerType | Promise<TailStream.TailEventHandlerType>;
+    type ExportedHandlerScheduledHandler<Env = unknown, Props = unknown> = (controller: ScheduledController, env: Env, ctx: ExecutionContext<Props>) => void | Promise<void>;
+    type ExportedHandlerQueueHandler<Env = unknown, Message = unknown, Props = unknown> = (batch: MessageBatch<Message>, env: Env, ctx: ExecutionContext<Props>) => void | Promise<void>;
+    type ExportedHandlerTestHandler<Env = unknown, Props = unknown> = (controller: TestController, env: Env, ctx: ExecutionContext<Props>) => void | Promise<void>;
+  );
+  JSG_STRUCT_TS_OVERRIDE(<Env = unknown, QueueHandlerMessage = unknown, CfHostMetadata = unknown, Props = unknown> {
+    email?: EmailExportedHandler<Env, Props>;
+    fetch?: ExportedHandlerFetchHandler<Env, CfHostMetadata, Props>;
+    connect?: ExportedHandlerConnectHandler<Env, Props>;
+    tail?: ExportedHandlerTailHandler<Env, Props>;
+    trace?: ExportedHandlerTraceHandler<Env, Props>;
+    tailStream?: ExportedHandlerTailStreamHandler<Env, Props>;
+    scheduled?: ExportedHandlerScheduledHandler<Env, Props>;
+    alarm: never;
+    webSocketMessage: never;
+    webSocketClose: never;
+    webSocketError: never;
+    queue?: ExportedHandlerQueueHandler<Env, QueueHandlerMessage, Props>;
+    test?: ExportedHandlerTestHandler<Env, Props>;
+  });
+  // Make `env` parameter generic
+
+  // Values to pass for `env` and `ctx` when calling handlers. Note these have to be the last members
+  // so that they don't interfere with `JSG_STRUCT`'s machinations.
+
+  // env and ctx values that need to be passed to the handler function. If the ExportedHandler
+  // represents a class instance (e.g. Durable Object instance), then `env` is is the JS value
+  // `undefined` and `ctx` is `kj::none`.
+  // TODO(cleanup): Why isn't `env` a `jsg::Optional` too? Or maybe the pair should be wrapped in
+  //   a struct that is `Maybe`?
+  jsg::Value env = nullptr;
+  jsg::Optional<jsg::Ref<ExecutionContext>> ctx = kj::none;
+  // TODO(cleanup): These are shoved here as a bit of a hack. At present, this is convenient and
+  //   works for all use cases. If we have bindings or things on ctx that vary on a per-request basis,
+  //   this won't work as well, I guess, but we can cross that bridge when we come to it.
+
+  // If true, this is a Durable Object class that failed to extend `DurableObject`. We will not
+  // permit RPC to this class.
+  bool missingSuperclass = false;
+
+  jsg::Optional<jsg::Ref<ExecutionContext>> getCtx() {
+    return ctx.map([&](jsg::Ref<ExecutionContext>& p) { return p.addRef(); });
+  }
+
+  ExportedHandler clone(jsg::Lock& js);
+};
+
+// An approximation of Node.js setImmediate `Immediate` object.
+// This is used only when the `nodejs_compat_v2` compatibility flag is enabled.
+class Immediate final: public jsg::Object {
+ public:
+  Immediate(IoContext& context, TimeoutId timeoutId);
+
+  // In Node.js, the "ref" mechanism refers to whether or not an i/o object
+  // will keep the libuv event loop alive (and therefore keep the process alive).
+  // We do not implement a similar mechanism in workerd. These are here only to
+  // satisfy the API contract for the `Immediate` object but are never expected
+  // to actually do anything.
+  bool hasRef() {
+    return false;
+  }
+  void ref() { /* non-op */ }
+  void unref() { /* non-op */ }
+
+  void dispose();
+
+  JSG_RESOURCE_TYPE(Immediate) {
+    JSG_METHOD(ref);
+    JSG_METHOD(unref);
+    JSG_METHOD(hasRef);
+    JSG_DISPOSE(dispose);
+  }
+
+ private:
+  // Note: We cannot use IoContext::WeakRef here because it's not thread-safe (it's only intended
+  // to be held from KJ I/O objects, but this is a JSG object which can be accessed by V8's GC
+  // on different threads). Instead, we use IoPtr<IoContext> which is safe to hold from JSG objects.
+  IoPtr<IoContext> ioContext;
+  TimeoutId timeoutId;
+};
+
+// Global object API exposed to JavaScript.
+class ServiceWorkerGlobalScope: public WorkerGlobalScope {
+ public:
+  ServiceWorkerGlobalScope();
+
+  // Drop all references to JavaScript objects so that the context can be garbage-collected. Call
+  // this when the context will never be used again and should be disposed.
+  void clear();
+  // TODO(someday): We should instead implement V8's GC visitor interface so that we don't have
+  //   to hold persistent references.
+
+  // Received request (called from C++, not JS).
+  //
+  // If `exportedHandler` is provided, the request will be delivered to it rather than to event
+  // listeners.
+  kj::Promise<DeferredProxy<void>> request(kj::HttpMethod method,
+      kj::StringPtr url,
+      const kj::HttpHeaders& headers,
+      kj::AsyncInputStream& requestBody,
+      kj::HttpService::Response& response,
+      kj::Maybe<kj::StringPtr> cfBlobJson,
+      Worker::Lock& lock,
+      kj::Maybe<ExportedHandler&> exportedHandler,
+      kj::Maybe<jsg::Ref<AbortSignal>> abortSignal);
+  // TODO(cleanup): Factor out the shared code used between old-style event listeners vs. module
+  //   exports and move that code somewhere more appropriate.
+
+  // Received TCP/socket ingress (called from C++, not JS).
+  kj::Promise<void> connect(kj::String host,
+      const kj::HttpHeaders& headers,
+      kj::AsyncIoStream& connection,
+      kj::HttpService::ConnectResponse& response,
+      Worker::Lock& lock,
+      kj::Maybe<ExportedHandler&> exportedHandler);
+
+  // Received sendTraces (called from C++, not JS).
+  void sendTraces(kj::ArrayPtr<kj::Own<Trace>> traces,
+      Worker::Lock& lock,
+      kj::Maybe<ExportedHandler&> exportedHandler);
+
+  // Start a scheduled event (called from C++, not JS). It is the caller's responsibility to wait
+  // for waitUntil()s in order to construct the final ScheduledResult.
+  void startScheduled(kj::Date scheduledTime,
+      kj::StringPtr cron,
+      Worker::Lock& lock,
+      kj::Maybe<ExportedHandler&> exportedHandler);
+
+  // Received runAlarm (called from C++, not JS).
+  kj::Promise<WorkerInterface::AlarmResult> runAlarm(kj::Date scheduledTime,
+      kj::Duration timeout,
+      uint32_t retryCount,
+      Worker::Lock& lock,
+      kj::Maybe<ExportedHandler&> exportedHandler);
+
+  // Received test() (called from C++, not JS). See WorkerInterface::test(). This version returns
+  // a jsg::Promise<void>; it fails if an exception is thrown. WorkerEntrypoint will catch these
+  // and report them.
+  jsg::Promise<void> test(Worker::Lock& lock, kj::Maybe<ExportedHandler&> exportedHandler);
+
+  kj::Promise<void> eventTimeoutPromise(uint32_t timeoutMs);
+  kj::Promise<void> setHibernatableEventTimeout(
+      kj::Promise<void> event, kj::Maybe<uint32_t> eventTimeoutMs);
+
+  void sendHibernatableWebSocketMessage(IoContext& context,
+      kj::OneOf<kj::String, kj::Array<byte>> message,
+      kj::Maybe<uint32_t> eventTimeoutMs,
+      kj::String websocketId,
+      Worker::Lock& lock,
+      kj::Maybe<ExportedHandler&> exportedHandler);
+
+  void sendHibernatableWebSocketClose(IoContext& context,
+      HibernatableSocketParams::Close close,
+      kj::Maybe<uint32_t> eventTimeoutMs,
+      kj::String websocketId,
+      Worker::Lock& lock,
+      kj::Maybe<ExportedHandler&> exportedHandler);
+
+  void sendHibernatableWebSocketError(IoContext& context,
+      kj::Exception e,
+      kj::Maybe<uint32_t> eventTimeoutMs,
+      kj::String websocketId,
+      Worker::Lock& lock,
+      kj::Maybe<ExportedHandler&> exportedHandler);
+
+  void emitPromiseRejection(jsg::Lock& js,
+      v8::PromiseRejectEvent event,
+      jsg::V8Ref<v8::Promise> promise,
+      jsg::Value value);
+
+  // Track a set of address->callback overrides for which the connect(address) behavior should be
+  // overridden via callbacks rather than using the default Socket connect() logic.
+  // This is useful for allowing generic client libraries to connect to private local services using
+  // just a provided address (rather than requiring them to support being passed a binding to call
+  // binding.connect() on).
+  using ConnectFn = kj::Function<jsg::Ref<api::Socket>(jsg::Lock&)>;
+  void setConnectOverride(kj::String networkAddress, ConnectFn connectFn);
+  kj::Maybe<ConnectFn&> getConnectOverride(kj::StringPtr networkAddress);
+
+  // ---------------------------------------------------------------------------
+  // JS API
+
+  jsg::JsString btoa(jsg::Lock& js, jsg::JsString data);
+  jsg::JsString atob(jsg::Lock& js, kj::String data);
+
+  void queueMicrotask(jsg::Lock& js, jsg::Function<void()> task);
+
+#ifdef WORKERD_FUZZILLI
+  void fuzzilli(jsg::Lock& js, jsg::Arguments<jsg::Value> args);
+#endif
+
+  struct StructuredCloneOptions {
+    jsg::Optional<kj::Array<jsg::JsRef<jsg::JsValue>>> transfer;
+    JSG_STRUCT(transfer);
+    JSG_STRUCT_TS_OVERRIDE(StructuredSerializeOptions);
+  };
+
+  jsg::JsValue structuredClone(
+      jsg::Lock& js, jsg::JsValue value, jsg::Optional<StructuredCloneOptions> options);
+
+  TimeoutId::NumberType setTimeout(jsg::Lock& js,
+      jsg::Function<void(jsg::Arguments<jsg::Value>)> function,
+      jsg::Optional<double> msDelay,
+      jsg::Arguments<jsg::Value> args);
+  void clearTimeout(jsg::Lock& js, kj::Maybe<jsg::JsNumber> timeoutId);
+
+  TimeoutId::NumberType setTimeoutInternal(jsg::Function<void()> function, double msDelay);
+
+  TimeoutId::NumberType setInterval(jsg::Lock& js,
+      jsg::Function<void(jsg::Arguments<jsg::Value>)> function,
+      jsg::Optional<double> msDelay,
+      jsg::Arguments<jsg::Value> args);
+  void clearInterval(jsg::Lock& js, kj::Maybe<jsg::JsNumber> timeoutId);
+
+  jsg::Promise<jsg::Ref<Response>> fetch(jsg::Lock& js,
+      kj::OneOf<jsg::Ref<Request>, kj::String> request,
+      jsg::Optional<Request::Initializer> requestInitr);
+
+  jsg::Ref<ServiceWorkerGlobalScope> getSelf() {
+    return JSG_THIS;
+  }
+
+  // Implemented in global-scope.c++ to avoid including crypto.h
+  jsg::Ref<Crypto> getCrypto(jsg::Lock& js);
+
+  jsg::Ref<Scheduler> getScheduler(jsg::Lock& js) {
+    return js.alloc<Scheduler>();
+  }
+
+  jsg::Ref<Navigator> getNavigator(jsg::Lock& js) {
+    return js.alloc<Navigator>();
+  }
+
+  jsg::Ref<Performance> getPerformance(jsg::Lock& js) {
+    return js.alloc<Performance>(Worker::Isolate::from(js).getLimitEnforcer());
+  }
+
+  jsg::Ref<Cloudflare> getCloudflare(jsg::Lock& js) {
+    return js.alloc<Cloudflare>();
+  }
+
+  // The origin is unknown, return "null" as described in
+  // https://html.spec.whatwg.org/multipage/browsers.html#concept-origin-opaque.
+  kj::StringPtr getOrigin() {
+    return "null";
+  }
+
+  jsg::Ref<CacheStorage> getCaches(jsg::Lock& js);
+
+  void reportError(jsg::Lock& js, jsg::JsValue error);
+
+  // When the nodejs_compat_v2 compatibility flag is enabled, we expose the Node.js
+  // compat Buffer and process at the global scope in all modules as lazy instance
+  // properties.
+  jsg::JsValue getBuffer(jsg::Lock& js);
+  void setBuffer(jsg::Lock& js, jsg::JsValue newBuffer);
+  jsg::JsValue getProcess(jsg::Lock& js);
+  void setProcess(jsg::Lock& js, jsg::JsValue newProcess);
+  jsg::Ref<Immediate> setImmediate(jsg::Lock& js,
+      jsg::Function<void(jsg::Arguments<jsg::Value>)> function,
+      jsg::Arguments<jsg::Value> args);
+  void clearImmediate(kj::Maybe<jsg::Ref<Immediate>> immediate);
+
+  JSG_RESOURCE_TYPE(ServiceWorkerGlobalScope, CompatibilityFlags::Reader flags) {
+    JSG_INHERIT(WorkerGlobalScope);
+
+    // *** WARNING ***: *Every* new export here must be treated as a potentially
+    // breaking change. It doesn't matter if it's a new method, a new property,
+    // or a new nested type. Adding anything to the global scope risks breaking
+    // existing user code that is feature-sniffing or monkeypatching the global.
+    // *Always* add new exports behind a new compatibility flag! And when in
+    // doubt, don't add the new export on globalThis at all. The only things
+    // that should be exported on globalThis should be standardized web APIs or
+    // Node.js compat mode globals.
+
+    JSG_NESTED_TYPE(DOMException);
+    JSG_NESTED_TYPE(WorkerGlobalScope);
+    if (flags.getSpecCompliantPropertyAttributes()) {
+      // EventTarget is also declared on WorkerGlobalScope, but V8's
+      // FunctionTemplate::Inherit() does not propagate instance-template
+      // properties.  Redeclare here so it becomes an own property of globalThis.
+      JSG_NESTED_TYPE(EventTarget);
+    }
+
+    JSG_METHOD(btoa);
+    JSG_METHOD(atob);
+
+    JSG_METHOD(setTimeout);
+    JSG_METHOD(clearTimeout);
+    JSG_METHOD(setInterval);
+    JSG_METHOD(clearInterval);
+    JSG_METHOD(queueMicrotask);
+    JSG_METHOD(structuredClone);
+    JSG_METHOD(reportError);
+
+    JSG_METHOD(fetch);
+
+    // Unlike regular interface attributes, which Web IDL requires us to
+    // implement as prototype properties, the global scope is special --
+    // interface attributes defined on the global scope must be implemented as
+    // instance properties. As an additional wrinkle, many of these properties
+    // are supposed to be readonly, but in practice most browsers do not fully
+    // honor that part of the spec, and allow user scripts to override many of
+    // the properties.
+    //
+    // Using JSG_LAZY_INSTANCE_PROPERTY here to expose new global properties
+    // ensures that any new global property we expose can be monkeypatched by
+    // user code without us having to handle any of the storage. The
+    // first time the properties are accessed, the getter will be invoked
+    // if the user has not already set the value for the property themselves.
+    // This should be the default choice for all new global properties that
+    // are not methods or nested types.
+    //
+    // We make an exception for origin, and define it as a readonly instance
+    // property, because we currently do not provide any implementation for it.
+
+    JSG_LAZY_INSTANCE_PROPERTY(self, getSelf);
+    JSG_LAZY_INSTANCE_PROPERTY(crypto, getCrypto);
+    JSG_LAZY_INSTANCE_PROPERTY(caches, getCaches);
+    JSG_LAZY_INSTANCE_PROPERTY(scheduler, getScheduler);
+    JSG_LAZY_INSTANCE_PROPERTY(performance, getPerformance);
+    JSG_LAZY_INSTANCE_PROPERTY(Cloudflare, getCloudflare);
+    JSG_READONLY_INSTANCE_PROPERTY(origin, getOrigin);
+
+#ifdef WORKERD_FUZZILLI
+    if (flags.getWorkerdExperimental()) {
+      JSG_METHOD(fuzzilli);
+    }
+#endif
+
+    JSG_NESTED_TYPE(Event);
+    JSG_NESTED_TYPE(ExtendableEvent);
+    JSG_NESTED_TYPE(CustomEvent);
+    JSG_NESTED_TYPE(PromiseRejectionEvent);
+    JSG_NESTED_TYPE(FetchEvent);
+    JSG_NESTED_TYPE(TailEvent);
+    JSG_NESTED_TYPE_NAMED(TailEvent, TraceEvent);
+    JSG_NESTED_TYPE(ScheduledEvent);
+    JSG_NESTED_TYPE(MessageEvent);
+    JSG_NESTED_TYPE(CloseEvent);
+    JSG_NESTED_TYPE(ReadableStreamDefaultReader);
+    JSG_NESTED_TYPE(ReadableStreamBYOBReader);
+    JSG_NESTED_TYPE(ReadableStream);
+    JSG_NESTED_TYPE(WritableStream);
+    JSG_NESTED_TYPE(WritableStreamDefaultWriter);
+    JSG_NESTED_TYPE(TransformStream);
+    JSG_NESTED_TYPE(ByteLengthQueuingStrategy);
+    JSG_NESTED_TYPE(CountQueuingStrategy);
+    JSG_NESTED_TYPE(ErrorEvent);
+
+    if (flags.getExposeGlobalMessageChannel()) {
+      JSG_NESTED_TYPE(MessageChannel);
+      JSG_NESTED_TYPE(MessagePort);
+    }
+
+    if (flags.getWebFileSystem()) {
+      JSG_NESTED_TYPE(FileSystemHandle);
+      JSG_NESTED_TYPE(FileSystemFileHandle);
+      JSG_NESTED_TYPE(FileSystemDirectoryHandle);
+      JSG_NESTED_TYPE(FileSystemWritableFileStream);
+      JSG_NESTED_TYPE(StorageManager);
+    }
+
+    JSG_NESTED_TYPE(EventSource);
+
+    if (flags.getStreamsJavaScriptControllers()) {
+      JSG_NESTED_TYPE(ReadableStreamBYOBRequest);
+      JSG_NESTED_TYPE(ReadableStreamDefaultController);
+      JSG_NESTED_TYPE(ReadableByteStreamController);
+      JSG_NESTED_TYPE(WritableStreamDefaultController);
+      JSG_NESTED_TYPE(TransformStreamDefaultController);
+    }
+
+    if (flags.getNodeJsCompatV2()) {
+      JSG_INSTANCE_PROPERTY(Buffer, getBuffer, setBuffer);
+      JSG_INSTANCE_PROPERTY(process, getProcess, setProcess);
+      JSG_LAZY_INSTANCE_PROPERTY(global, getSelf);
+      JSG_METHOD(setImmediate);
+      JSG_METHOD(clearImmediate);
+    }
+
+    JSG_NESTED_TYPE(CompressionStream);
+    JSG_NESTED_TYPE(DecompressionStream);
+    JSG_NESTED_TYPE(TextEncoderStream);
+    JSG_NESTED_TYPE(TextDecoderStream);
+
+    JSG_NESTED_TYPE(Headers);
+    JSG_NESTED_TYPE(Body);
+    JSG_NESTED_TYPE(Request);
+    JSG_NESTED_TYPE(Response);
+    JSG_NESTED_TYPE(WebSocket);
+    JSG_NESTED_TYPE(WebSocketPair);
+    JSG_NESTED_TYPE(WebSocketRequestResponsePair);
+
+    JSG_NESTED_TYPE(AbortController);
+    JSG_NESTED_TYPE(AbortSignal);
+
+    JSG_NESTED_TYPE(TextDecoder);
+    JSG_NESTED_TYPE(TextEncoder);
+
+    if (flags.getGlobalNavigator()) {
+      JSG_LAZY_INSTANCE_PROPERTY(navigator, getNavigator);
+      JSG_NESTED_TYPE(Navigator);
+    }
+
+    if (flags.getSpecCompliantUrl()) {
+      JSG_NESTED_TYPE_NAMED(url::URL, URL);
+      JSG_NESTED_TYPE_NAMED(url::URLSearchParams, URLSearchParams);
+    } else {
+      JSG_NESTED_TYPE(URL);
+      JSG_NESTED_TYPE(URLSearchParams);
+    }
+
+    if (flags.getSpecCompliantUrlpattern()) {
+      JSG_NESTED_TYPE_NAMED(urlpattern::URLPattern, URLPattern);
+    } else {
+      JSG_NESTED_TYPE(URLPattern);
+    }
+
+    JSG_NESTED_TYPE(Blob);
+    JSG_NESTED_TYPE(File);
+    JSG_NESTED_TYPE(FormData);
+
+    JSG_NESTED_TYPE(Crypto);
+    JSG_NESTED_TYPE(SubtleCrypto);
+    JSG_NESTED_TYPE(CryptoKey);
+
+    JSG_NESTED_TYPE(CacheStorage);
+    JSG_NESTED_TYPE(Cache);
+
+    // Off-spec extensions.
+    JSG_NESTED_TYPE(FixedLengthStream);
+    JSG_NESTED_TYPE(IdentityTransformStream);
+    JSG_NESTED_TYPE(HTMLRewriter);
+
+    // Performance API
+    if (flags.getEnableGlobalPerformanceClasses() || flags.getEnableNodeJsPerfHooksModule()) {
+      JSG_NESTED_TYPE(Performance);
+      JSG_NESTED_TYPE(PerformanceEntry);
+      JSG_NESTED_TYPE(PerformanceMark);
+      JSG_NESTED_TYPE(PerformanceMeasure);
+      JSG_NESTED_TYPE(PerformanceResourceTiming);
+      JSG_NESTED_TYPE(PerformanceObserver);
+      JSG_NESTED_TYPE(PerformanceObserverEntryList);
+    }
+
+    JSG_TS_ROOT();
+    // JSG_TS_DEFINE_LITERAL is used here instead of JSG_TS_DEFINE because the TypeScript definition
+    // contains the `module` keyword, which Clang rejects as a C++20 module directive when it
+    // appears inside macro arguments.
+    JSG_TS_DEFINE_LITERAL(R"(
+      interface Console {
+        "assert"(condition?: boolean, ...data: any[]): void;
+        clear(): void;
+        count(label?: string): void;
+        countReset(label?: string): void;
+        debug(...data: any[]): void;
+        dir(item?: any, options?: any): void;
+        dirxml(...data: any[]): void;
+        error(...data: any[]): void;
+        group(...data: any[]): void;
+        groupCollapsed(...data: any[]): void;
+        groupEnd(): void;
+        info(...data: any[]): void;
+        log(...data: any[]): void;
+        table(tabularData?: any, properties?: string[]): void;
+        time(label?: string): void;
+        timeEnd(label?: string): void;
+        timeLog(label?: string, ...data: any[]): void;
+        timeStamp(label?: string): void;
+        trace(...data: any[]): void;
+        warn(...data: any[]): void;
+      }
+      const console: Console;
+
+      type BufferSource = ArrayBufferView | ArrayBuffer;
+      type TypedArray =
+        | Int8Array
+        | Uint8Array
+        | Uint8ClampedArray
+        | Int16Array
+        | Uint16Array
+        | Int32Array
+        | Uint32Array
+        | Float32Array
+        | Float64Array
+        | BigInt64Array
+        | BigUint64Array;
+
+      namespace WebAssembly {
+        class CompileError extends Error {
+          constructor(message?: string);
+        }
+        class RuntimeError extends Error {
+          constructor(message?: string);
+        }
+
+        type ValueType = "anyfunc" | "externref" | "f32" | "f64" | "i32" | "i64" | "v128";
+        interface GlobalDescriptor {
+          value: ValueType;
+          mutable?: boolean;
+        }
+        class Global {
+          constructor(descriptor: GlobalDescriptor, value?: any);
+          value: any;
+          valueOf(): any;
+        }
+
+        type ImportValue = ExportValue | number;
+        type ModuleImports = Record<string, ImportValue>;
+        type Imports = Record<string, ModuleImports>;
+        type ExportValue = Function | Global | Memory | Table;
+        type Exports = Record<string, ExportValue>;
+        class Instance {
+          constructor(module: Module, imports?: Imports);
+          readonly exports: Exports;
+        }
+
+        interface MemoryDescriptor {
+          initial: number;
+          maximum?: number;
+          shared?: boolean;
+        }
+        class Memory {
+          constructor(descriptor: MemoryDescriptor);
+          readonly buffer: ArrayBuffer;
+          grow(delta: number): number;
+        }
+
+        type ImportExportKind = "function" | "global" | "memory" | "table";
+        interface ModuleExportDescriptor {
+          kind: ImportExportKind;
+          name: string;
+        }
+        interface ModuleImportDescriptor {
+          kind: ImportExportKind;
+          module: string;
+          name: string;
+        }
+        abstract class Module {
+          static customSections(module: Module, sectionName: string): ArrayBuffer[];
+          static exports(module: Module): ModuleExportDescriptor[];
+          static imports(module: Module): ModuleImportDescriptor[];
+        }
+
+        type TableKind = "anyfunc" | "externref";
+        interface TableDescriptor {
+          element: TableKind;
+          initial: number;
+          maximum?: number;
+        }
+        class Table {
+          constructor(descriptor: TableDescriptor, value?: any);
+          readonly length: number;
+          get(index: number): any;
+          grow(delta: number, value?: any): number;
+          set(index: number, value?: any): void;
+        }
+
+        function instantiate(module: Module, imports?: Imports): Promise<Instance>;
+        function validate(bytes: BufferSource): boolean;
+      }
+    )");
+    // workerd disables dynamic WebAssembly compilation, so `compile()`, `compileStreaming()`, the
+    // `instantiate()` override taking a `BufferSource` and `instantiateStreaming()` are omitted.
+    // `Module` is also declared `abstract` to disable its `BufferSource` constructor.
+
+    JSG_TS_OVERRIDE({
+      setTimeout(callback: (...args: any[]) => void, msDelay?: number): number;
+      setTimeout<Args extends any[]>(callback: (...args: Args) => void, msDelay?: number, ...args: Args): number;
+
+      setInterval(callback: (...args: any[]) => void, msDelay?: number): number;
+      setInterval<Args extends any[]>(callback: (...args: Args) => void, msDelay?: number, ...args: Args): number;
+
+      structuredClone<T>(value: T, options?: StructuredSerializeOptions): T;
+      queueMicrotask(task: Function): void;
+
+      fetch(input: RequestInfo | URL, init?: RequestInit<RequestInitCfProperties>): Promise<Response>;
+    });
+  }
+
+  TimeoutId::Generator timeoutIdGenerator;
+  // The generator for all timeout IDs associated with this scope.
+
+  void visitForMemoryInfo(jsg::MemoryTracker& tracker) const {
+    tracker.trackField("unhandledRejections", unhandledRejections);
+  }
+
+ private:
+  jsg::UnhandledRejectionHandler unhandledRejections;
+  kj::Maybe<jsg::JsRef<jsg::JsValue>> processValue;
+  kj::Maybe<jsg::JsRef<jsg::JsValue>> bufferValue;
+  kj::Maybe<jsg::Ref<Fetcher>> defaultFetcher;
+  kj::HashMap<kj::String, ConnectFn> connectOverrides;
+
+  // Global properties such as scheduler, crypto, caches, self, and origin should
+  // be monkeypatchable / mutable at the global scope.
+};
+
+#define EW_GLOBAL_SCOPE_ISOLATE_TYPES                                                              \
+  api::WorkerGlobalScope, api::ServiceWorkerGlobalScope, api::TestController,                      \
+      api::ExecutionContext, api::ExportedHandler,                                                 \
+      api::ServiceWorkerGlobalScope::StructuredCloneOptions, api::Navigator,                       \
+      api::AlarmInvocationInfo, api::Immediate, api::Cloudflare, api::CachePurgeError,             \
+      api::CachePurgeResult, api::CachePurgeOptions, api::CacheContext
+// The list of global-scope.h types that are added to worker.c++'s JSG_DECLARE_ISOLATE_TYPE
+}  // namespace workerd::api

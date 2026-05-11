@@ -1,0 +1,17 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "commonjs-module-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "commonjs-module-test.js"),
+          (name = "foo",
+           commonJsModule = "exports.foo = 1",
+           namedExports = ["foo", "bar"])
+        ],
+        compatibilityFlags = ["nodejs_compat"],
+      )
+    ),
+  ],
+);

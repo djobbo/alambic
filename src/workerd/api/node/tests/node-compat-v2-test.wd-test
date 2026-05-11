@@ -1,0 +1,16 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "node-compat-v2-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "node-compat-v2-test.js"),
+          (name = "node:fs", esModule = "export default 1"),
+          (name = "node:path", esModule = "export default 2"),
+        ],
+        compatibilityFlags = ["nodejs_compat_v2"]
+      )
+    ),
+  ],
+);

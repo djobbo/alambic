@@ -1,0 +1,18 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "blob2-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "blob2-test.js")
+        ],
+        compatibilityFlags = [
+          "nodejs_compat",
+          "blob_standard_mime_type",
+          "no_resizable_array_buffer_in_blob",
+        ],
+      )
+    ),
+  ],
+);

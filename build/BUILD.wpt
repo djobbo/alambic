@@ -1,0 +1,21 @@
+# Copyright (c) 2017-2022 Cloudflare, Inc.
+# Licensed under the Apache 2.0 license found in the LICENSE file or at:
+#     https://opensource.org/licenses/Apache-2.0
+
+load("@workerd//:build/wpt_get_directories.bzl", "wpt_all_dirs")
+load("@workerd//:build/wpt_test.bzl", "wpt_module", "wpt_server_entrypoint")
+
+[wpt_module(
+    name = dir,
+) for dir in wpt_all_dirs()]
+
+wpt_server_entrypoint(
+    name = "entrypoint",
+    srcs = ["wpt"] + glob(["**/*.py"]),
+    python = "@@rules_python++python+python_3_13//:python3",
+    visibility = ["//visibility:public"],
+)
+
+exports_files([
+    "tools/certs/cacert.pem",
+])

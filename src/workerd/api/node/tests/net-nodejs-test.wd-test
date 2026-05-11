@@ -1,0 +1,24 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "net-nodejs-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "net-nodejs-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat", "nodejs_compat_v2", "url_standard"],
+        bindings = [
+          (name = "SIDECAR_HOSTNAME", fromEnvironment = "SIDECAR_HOSTNAME"),
+          (name = "SERVER_PORT", fromEnvironment = "SERVER_PORT"),
+          (name = "ECHO_SERVER_PORT", fromEnvironment = "ECHO_SERVER_PORT"),
+          (name = "TIMEOUT_SERVER_PORT", fromEnvironment = "TIMEOUT_SERVER_PORT"),
+          (name = "END_SERVER_PORT", fromEnvironment = "END_SERVER_PORT"),
+          (name = "SERVER_THAT_DIES_PORT", fromEnvironment = "SERVER_THAT_DIES_PORT"),
+          (name = "RECONNECT_SERVER_PORT", fromEnvironment = "RECONNECT_SERVER_PORT"),
+        ]
+      )
+    ),
+    ( name = "internet", network = ( allow = ["private"] ) ),
+  ],
+);

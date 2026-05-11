@@ -1,0 +1,22 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "fetch-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "fetch-test.js")
+        ],
+        compatibilityFlags = [
+          "nodejs_compat_v2",
+          "upper_case_all_http_methods",
+          "fetch_iterable_type_support",
+          # Note that the override adjustment flag will be enabled by default
+          # when fetch_iterable_type_support is enabled after 2026-01-15.
+          "fetch_iterable_type_support_override_adjustment",
+          "streams_enable_constructors",
+        ],
+      )
+    ),
+  ],
+);

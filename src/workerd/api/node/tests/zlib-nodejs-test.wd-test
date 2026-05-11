@@ -1,0 +1,47 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "nodejs-zlib-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "zlib-nodejs-test.js")
+        ],
+        compatibilityFlags = ["experimental", "nodejs_compat", "nodejs_compat_v2", "nodejs_zlib"],
+        bindings = [
+          ( name = "compat", service = "compat" ),
+          ( name = "compatv2", service = "compatv2" ),
+          ( name = "compatNoV2", service = "compatNoV2" ),
+        ],
+      )
+    ),
+    (
+      name = "compat",
+      worker = (
+        modules = [
+          (name = "worker", esModule = "export default {fetch() {return new Response(`${JSON.stringify(globalThis.Cloudflare.compatibilityFlags.nodejs_zlib)}`);}}")
+        ],
+        compatibilityFlags = ["nodejs_compat", "nodejs_zlib"],
+      )
+    ),
+    (
+      name = "compatv2",
+      worker = (
+        modules = [
+          (name = "worker", esModule = "export default {fetch() {return new Response(`${JSON.stringify(globalThis.Cloudflare.compatibilityFlags.nodejs_zlib)}`);}}")
+        ],
+        compatibilityFlags = ["nodejs_compat_v2", "nodejs_zlib"],
+      )
+    ),
+    (
+      name = "compatNoV2",
+      worker = (
+        modules = [
+          (name = "worker", esModule = "export default {fetch() {return new Response(`${JSON.stringify(globalThis.Cloudflare.compatibilityFlags.nodejs_zlib)}`);}}")
+        ],
+        compatibilityFlags = ["nodejs_compat", "no_nodejs_compat_v2", "nodejs_zlib"],
+      )
+    )
+  ],
+);
+

@@ -1,0 +1,20 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "request-signal-passthrough",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "request-signal-passthrough.js" )
+        ],
+        compatibilityFlags = ["nodejs_compat", "enable_request_signal", "request_signal_passthrough", "enable_abortsignal_rpc", "experimental", "rpc", "unwrap_custom_thenables"],
+        bindings = [
+          (name = "OtherServer", service = (name = "request-signal-passthrough", entrypoint = "OtherServer")),
+          (name = "Server", service = (name = "request-signal-passthrough", entrypoint = "Server")),
+          (name = "defaultExport", service = "request-signal-passthrough"),
+        ]
+      )
+    )
+  ]
+);
+

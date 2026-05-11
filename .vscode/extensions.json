@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "eamodio.gitlens",
+    "llvm-vs-code-extensions.vscode-clangd",
+    "ms-vscode.cpptools",
+    "abronan.capnproto-syntax",
+    "DavidAnson.vscode-markdownlint",
+    "skellock.just"
+  ]
+}

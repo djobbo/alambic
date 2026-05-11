@@ -1,0 +1,27 @@
+# Apply prettier to the project
+0523bf8b36a937348f1bb79eceda2463a5c220b5
+
+# Apply clang-format to the project.
+5e8537a77e760c160ace3dfe23ee8c76ee5aeeb3
+
+# Apply ruff format to the project
+d6d0607a845e6f71084ce272a1c1e8c50e244bdd
+
+# Apply buildifier to the project
+f457f19039b82536b35659c1f9cb898a198e6cd1
+
+# Apply ruff linter to the project
+893774eab71fd7be5000436ff2ff0b5dd85ef073
+
+# Use clang-format to sort includes.
+faabf00af72bbce956221b40624f8a3d57f82b7c
+b9e9fb144f44494017e77fbe959355e92f10ae69
+
+# Add `AllowShortBlocksOnASingleLine: Empty` to clang-format
+fa2c488219a5e96792e61f3d51838595e2907c8d
+
+# clang-tidy: Add google-readability-casting, modernize-use-using
+21dc6eb66a2344b8e756b897ade27cc107b58153
+
+# clang-tidy: Add more readability checks
+d8987b2c4206c8b28b637c24219a580431873d12

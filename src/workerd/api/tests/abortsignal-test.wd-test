@@ -1,0 +1,18 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "abortsignal-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "abortsignal-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat", "enable_abortsignal_rpc", "experimental"],
+        bindings = [
+          (name = "RpcRemoteEnd", service = (name = "abortsignal-test", entrypoint = "RpcRemoteEnd")),
+        ]
+      )
+    ),
+  ],
+  v8Flags = ["--expose-gc"]
+);

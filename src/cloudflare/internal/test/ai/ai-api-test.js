@@ -1,0 +1,453 @@
+// Copyright (c) 2024 Cloudflare, Inc.
+// Licensed under the Apache 2.0 license found in the LICENSE file or at:
+//     https://opensource.org/licenses/Apache-2.0
+
+import * as assert from 'node:assert';
+
+export const tests = {
+  async test(_, env) {
+    {
+      // Test ai run response is object
+      const resp = await env.ai.run('testModel', { prompt: 'test' });
+      assert.deepStrictEqual(resp, { response: 'model response' });
+
+      // Test request id is present
+      assert.deepStrictEqual(
+        env.ai.lastRequestId,
+        '3a1983d7-1ddd-453a-ab75-c4358c91b582'
+      );
+      // Test request http status code is present
+      assert.deepStrictEqual(env.ai.lastRequestHttpStatusCode, 200);
+    }
+
+    {
+      // Test ai blob model run response is a blob/stream
+      const resp = await env.ai.run('blobResponseModel', { prompt: 'test' });
+      assert.deepStrictEqual(resp instanceof ReadableStream, true);
+    }
+
+    {
+      // Test legacy fetch
+      const resp = await env.ai.fetch(
+        'http://workers-binding.ai/run?version=2',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            inputs: { prompt: 'test' },
+            options: {},
+          }),
+        }
+      );
+      assert.deepStrictEqual(await resp.json(), { response: 'model response' });
+    }
+
+    {
+      // Test error response
+      try {
+        await env.ai.run('inputErrorModel', { prompt: 'test' });
+      } catch (e) {
+        assert.deepEqual(
+          {
+            name: e.name,
+            message: e.message,
+          },
+          {
+            name: 'InvalidInput',
+            message: '1001: prompt and messages are mutually exclusive',
+          }
+        );
+        // Test request internal status code is present
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        assert.deepEqual;
+        assert.deepStrictEqual(env.ai.lastRequestInternalStatusCode, 1001);
+      }
+    }
+
+    {
+      // Test error properties
+      const err = await env.ai._parseError(
+        Response.json({
+          internalCode: 1001,
+          message: 'InvalidInput: prompt and messages are mutually exclusive',
+          name: 'InvalidInput',
+          description: 'prompt and messages are mutually exclusive',
+        })
+      );
+      assert.equal(err.name, 'InvalidInput');
+      assert.equal(
+        err.message,
+        '1001: prompt and messages are mutually exclusive'
+      );
+    }
+
+    {
+      // Test error properties from non json response
+      const err = await env.ai._parseError(new Response('Unknown error'));
+      assert.equal(err.name, 'InferenceUpstreamError');
+      assert.equal(err.message, 'Unknown error');
+    }
+
+    {
+      // Test raw input
+      const resp = await env.ai.run('rawInputs', { prompt: 'test' });
+
+      assert.deepStrictEqual(resp, {
+        inputs: { prompt: 'test' },
+        options: {},
+        requestUrl: 'https://workers-binding.ai/run?version=3',
+      });
+    }
+
+    {
+      // Test one readable stream input
+      const encoder = new TextEncoder();
+      const arr = [1, 2, 3];
+      const resp = await env.ai.run('readableStreamIputs', {
+        audio: {
+          body: new ReadableStream({
+            start(controller) {
+              for (const ele of arr) {
+                controller.enqueue(encoder.encode(ele));
+              }
+              controller.close();
+            },
+          }),
+          contentType: 'audio/wav',
+        },
+      });
+
+      assert.deepStrictEqual(resp, {
+        inputs: {},
+        options: { userInputs: '{}', version: '3' },
+        requestUrl:
+          'https://workers-binding.ai/run?version=3&userInputs=%7B%7D',
+      });
+    }
+
+    {
+      // Test one readable stream input with additional parameters
+      const encoder = new TextEncoder();
+      const arr = [1, 2, 3];
+      const resp = await env.ai.run('readableStreamIputs', {
+        audio: {
+          body: new ReadableStream({
+            start(controller) {
+              for (const ele of arr) {
+                controller.enqueue(encoder.encode(ele));
+              }
+              controller.close();
+            },
+          }),
+          contentType: 'audio/wav',
+        },
+        detect_language: true,
+        prompt: 'test prompt',
+      });
+
+      assert.deepStrictEqual(resp, {
+        inputs: {},
+        options: {
+          userInputs: '{"detect_language":true,"prompt":"test prompt"}',
+          version: '3',
+        },
+        requestUrl:
+          'https://workers-binding.ai/run?version=3&userInputs=%7B%22detect_language%22%3Atrue%2C%22prompt%22%3A%22test+prompt%22%7D',
+      });
+    }
+
+    {
+      // Test errors from one readable stream input without content-type
+      await assert.rejects(
+        async () => {
+          const arr = [1, 2, 3];
+          const encoder = new TextEncoder();
+          const _resp = await env.ai.run('readableStreamIputs', {
+            audio: {
+              body: new ReadableStream({
+                start(controller) {
+                  for (const ele of arr) {
+                    controller.enqueue(encoder.encode(ele));
+                  }
+                  controller.close();
+                },
+              }),
+            },
+          });
+        },
+        {
+          name: 'AiInternalError',
+          message: 'Content-Type is required with ReadableStream inputs',
+        }
+      );
+    }
+
+    {
+      // Test errors from two readable stream inputs
+      await assert.rejects(
+        async () => {
+          const arr = [1, 2, 3];
+          const stream = new ReadableStream({
+            start(controller) {
+              const encoder = new TextEncoder();
+              for (const ele of arr) {
+                controller.enqueue(encoder.encode(ele));
+              }
+              controller.close();
+            },
+          });
+          const _resp = await env.ai.run('readableStreamIputs', {
+            audio: {
+              body: stream,
+              contentType: 'audio/wav',
+            },
+            image: {
+              body: stream,
+              contentType: 'image/png',
+            },
+          });
+        },
+        {
+          name: 'AiInternalError',
+          message:
+            'Multiple ReadableStreams are not supported. Found streams in keys: [audio, image]',
+        }
+      );
+    }
+
+    {
+      // Test form data input
+      const form = new FormData();
+      form.append('prompt', 'cat');
+      const resp = await env.ai.run('formDataInputs', {
+        audio: {
+          body: form,
+          contentType: 'multipart/form-data',
+        },
+      });
+
+      assert.deepStrictEqual(resp, {
+        inputs: {},
+        options: { userInputs: '{}', version: '3' },
+        requestUrl:
+          'https://workers-binding.ai/run?version=3&userInputs=%7B%7D',
+      });
+    }
+
+    {
+      // Test gateway option
+      const resp = await env.ai.run(
+        'rawInputs',
+        { prompt: 'test' },
+        { gateway: { id: 'my-gateway', skipCache: true } }
+      );
+
+      assert.deepStrictEqual(resp, {
+        inputs: { prompt: 'test' },
+        options: { gateway: { id: 'my-gateway', skipCache: true } },
+        requestUrl: 'https://workers-binding.ai/ai-gateway/run?version=3',
+      });
+    }
+
+    {
+      // Test unwanted options not getting sent upstream
+      const resp = await env.ai.run(
+        'rawInputs',
+        { prompt: 'test' },
+        {
+          extraHeaders: 'test',
+          example: 123,
+          gateway: { id: 'my-gateway', metadata: { employee: 1233 } },
+        }
+      );
+
+      assert.deepStrictEqual(resp, {
+        inputs: { prompt: 'test' },
+        options: {
+          example: 123,
+          gateway: { id: 'my-gateway', metadata: { employee: 1233 } },
+        },
+        requestUrl: 'https://workers-binding.ai/ai-gateway/run?version=3',
+      });
+    }
+
+    {
+      // Test models
+      const resp = await env.ai.models();
+
+      assert.deepStrictEqual(resp, [
+        {
+          id: 'f8703a00-ed54-4f98-bdc3-cd9a813286f3',
+          source: 1,
+          name: '@cf/qwen/qwen1.5-0.5b-chat',
+          description:
+            'Qwen1.5 is the improved version of Qwen, the large language model series developed by Alibaba Cloud.',
+          task: {
+            id: 'c329a1f9-323d-4e91-b2aa-582dd4188d34',
+            name: 'Text Generation',
+            description:
+              'Family of generative text models, such as large language models (LLM), that can be adapted for a variety of natural language tasks.',
+          },
+          tags: [],
+          properties: [
+            {
+              property_id: 'debug',
+              value: 'https://workers-binding.ai/ai-api/models/search',
+            },
+          ],
+        },
+      ]);
+    }
+
+    {
+      // Test models with params
+      const resp = await env.ai.models({
+        search: 'test',
+        per_page: 3,
+        page: 1,
+        task: 'asd',
+      });
+
+      assert.deepStrictEqual(resp, [
+        {
+          id: 'f8703a00-ed54-4f98-bdc3-cd9a813286f3',
+          source: 1,
+          name: '@cf/qwen/qwen1.5-0.5b-chat',
+          description:
+            'Qwen1.5 is the improved version of Qwen, the large language model series developed by Alibaba Cloud.',
+          task: {
+            id: 'c329a1f9-323d-4e91-b2aa-582dd4188d34',
+            name: 'Text Generation',
+            description:
+              'Family of generative text models, such as large language models (LLM), that can be adapted for a variety of natural language tasks.',
+          },
+          tags: [],
+          properties: [
+            {
+              property_id: 'debug',
+              value:
+                'https://workers-binding.ai/ai-api/models/search?search=test&per_page=3&page=1&task=asd',
+            },
+          ],
+        },
+      ]);
+    }
+
+    {
+      // Test `returnRawResponse` option is returning a Response object
+      const resp = await env.ai.run(
+        'rawInputs',
+        { prompt: 'test' },
+        { returnRawResponse: true }
+      );
+
+      assert.ok(resp instanceof Response);
+    }
+
+    {
+      // Test websocket option with basic inputs
+      const resp = await env.ai.run(
+        '@cf/test/websocket',
+        { encoding: 'utf8' },
+        { websocket: true }
+      );
+      assert.deepStrictEqual(resp instanceof Response, true);
+      const respData = await resp.json();
+      assert.deepStrictEqual(respData, {
+        inputs: { encoding: 'utf8' },
+        options: { websocket: true },
+        requestUrl:
+          'https://workers-binding.ai/run?version=3&body=%7B%22inputs%22%3A%7B%22encoding%22%3A%22utf8%22%7D%2C%22options%22%3A%7B%22websocket%22%3Atrue%7D%7D',
+        headers: {
+          'cf-consn-sdk-version': '2.0.0',
+          'cf-consn-model-id': '@cf/test/websocket',
+          upgrade: 'websocket',
+        },
+      });
+    }
+
+    {
+      // Test signal option is not included in request body
+      const controller = new AbortController();
+      const resp = await env.ai.run(
+        'rawInputs',
+        { prompt: 'test' },
+        { signal: controller.signal }
+      );
+
+      assert.deepStrictEqual(resp, {
+        inputs: { prompt: 'test' },
+        options: {},
+        requestUrl: 'https://workers-binding.ai/run?version=3',
+      });
+    }
+
+    {
+      // Test already-aborted signal throws AbortError for websocket requests
+      await assert.rejects(
+        async () => {
+          await env.ai.run(
+            '@cf/test/websocket',
+            { encoding: 'utf8' },
+            { websocket: true, signal: AbortSignal.abort() }
+          );
+        },
+        { name: 'AbortError' }
+      );
+    }
+
+    {
+      // Test already-aborted signal throws AbortError for readable stream inputs
+      await assert.rejects(
+        async () => {
+          await env.ai.run(
+            'readableStreamIputs',
+            {
+              audio: {
+                body: new ReadableStream({
+                  start(controller) {
+                    controller.enqueue(new TextEncoder().encode('1'));
+                    controller.close();
+                  },
+                }),
+                contentType: 'audio/wav',
+              },
+            },
+            { signal: AbortSignal.abort() }
+          );
+        },
+        { name: 'AbortError' }
+      );
+    }
+
+    {
+      // Test already-aborted signal throws AbortError
+      await assert.rejects(
+        async () => {
+          await env.ai.run(
+            'rawInputs',
+            { prompt: 'test' },
+            { signal: AbortSignal.abort() }
+          );
+        },
+        { name: 'AbortError' }
+      );
+    }
+
+    {
+      // Test aborting an in-flight request
+      const controller = new AbortController();
+      let resolved = false;
+      const promise = env.ai
+        .run('hangingModel', { prompt: 'test' }, { signal: controller.signal })
+        .finally(() => {
+          resolved = true;
+        });
+      // Wait a moment for the request to start.
+      await scheduler.wait(10);
+      assert.deepStrictEqual(resolved, false);
+      controller.abort();
+      await assert.rejects(promise, { name: 'AbortError' });
+    }
+  },
+};

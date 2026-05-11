@@ -1,0 +1,36 @@
+#pragma once
+
+#include <workerd/jsg/jsg.h>
+
+#include <openssl/base.h>
+
+#include <kj/common.h>
+
+namespace workerd::api {
+
+class DiffieHellman final {
+ public:
+  DiffieHellman(kj::StringPtr group);
+  DiffieHellman(kj::OneOf<kj::Array<kj::byte>, int>& sizeOrKey,
+      kj::OneOf<kj::Array<kj::byte>, int>& generator);
+  DiffieHellman(DiffieHellman&&) = default;
+  DiffieHellman& operator=(DiffieHellman&&) = default;
+  KJ_DISALLOW_COPY(DiffieHellman);
+
+  void setPrivateKey(kj::ArrayPtr<kj::byte> key);
+  void setPublicKey(kj::ArrayPtr<kj::byte> key);
+
+  jsg::JsUint8Array getPublicKey(jsg::Lock& js) KJ_WARN_UNUSED_RESULT;
+  jsg::JsUint8Array getPrivateKey(jsg::Lock& js) KJ_WARN_UNUSED_RESULT;
+  jsg::JsUint8Array getGenerator(jsg::Lock& js) KJ_WARN_UNUSED_RESULT;
+  jsg::JsUint8Array getPrime(jsg::Lock& js) KJ_WARN_UNUSED_RESULT;
+  jsg::JsUint8Array computeSecret(jsg::Lock& js, kj::ArrayPtr<kj::byte> key) KJ_WARN_UNUSED_RESULT;
+  jsg::JsUint8Array generateKeys(jsg::Lock& js) KJ_WARN_UNUSED_RESULT;
+
+  kj::Maybe<int> check() KJ_WARN_UNUSED_RESULT;
+
+ private:
+  kj::Own<DH> dh;
+};
+
+}  // namespace workerd::api

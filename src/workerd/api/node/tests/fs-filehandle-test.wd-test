@@ -1,0 +1,15 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  v8Flags = ["--expose-gc"],
+  services = [
+    ( name = "fs-filehandle-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "fs-filehandle-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat", "nodejs_compat_v2", "experimental", "enable_nodejs_fs_module"]
+      )
+    ),
+  ],
+);

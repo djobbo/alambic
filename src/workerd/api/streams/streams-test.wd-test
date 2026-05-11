@@ -1,0 +1,29 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "streams-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "streams-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat", "streams_enable_constructors", "transformstream_enable_standard_constructor", "workers_api_getters_setters_on_prototype"],
+        bindings = [ ( name = "KV", kvNamespace = "kv" ) ],
+      )
+    ),
+    ( name = "kv",
+      worker = (
+        modules = [
+          (name = "kv", esModule =
+            `export default {
+            `  async fetch(request, env, ctx) {
+            `    return new Response(await request.arrayBuffer());
+            `  }
+            `}
+          )
+        ],
+        compatibilityFlags = ["nodejs_compat"]
+      )
+    ),
+  ],
+);

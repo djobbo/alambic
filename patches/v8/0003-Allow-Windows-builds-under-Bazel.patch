@@ -1,0 +1,142 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brendan Coll <bcoll@cloudflare.com>
+Date: Thu, 16 Mar 2023 11:56:10 +0000
+Subject: Allow Windows builds under Bazel
+
+Signed-off-by: James M Snell <jsnell@cloudflare.com>
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+index ae9c73762bef46c302a10a85076cbe913617965a..f79d7f3e434a126daa41b8effd6e98f0d487e773 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -4107,6 +4107,8 @@ filegroup(
+         "@v8//bazel/config:is_inline_asm_x64": ["src/heap/base/asm/x64/push_registers_asm.cc"],
+         "@v8//bazel/config:is_inline_asm_arm": ["src/heap/base/asm/arm/push_registers_asm.cc"],
+         "@v8//bazel/config:is_inline_asm_arm64": ["src/heap/base/asm/arm64/push_registers_asm.cc"],
++        "@v8//bazel/config:is_windows_clang_asm_x64": ["src/heap/base/asm/x64/push_registers_asm.cc"],
++        "@v8//bazel/config:is_windows_clang_asm_arm64": ["src/heap/base/asm/arm64/push_registers_asm.cc"],
+         "@v8//bazel/config:is_inline_asm_s390x": ["src/heap/base/asm/s390/push_registers_asm.cc"],
+         "@v8//bazel/config:is_inline_asm_riscv64": ["src/heap/base/asm/riscv64/push_registers_asm.cc"],
+         "@v8//bazel/config:is_inline_asm_ppc64le": ["src/heap/base/asm/ppc/push_registers_asm.cc"],
+diff --git a/bazel/config/BUILD.bazel b/bazel/config/BUILD.bazel
+index 17e379b8e27baaa33f58ee852cfd919a9b39d729..7c2154b8ac2e817abebf89f5fa7d30354591d381 100644
+--- a/bazel/config/BUILD.bazel
++++ b/bazel/config/BUILD.bazel
+@@ -270,6 +270,7 @@ selects.config_setting_group(
+     match_all = [
+         ":is_windows",
+         ":is_x64",
++        ":is_compiler_default",
+     ],
+ )
+ 
+@@ -278,6 +279,7 @@ selects.config_setting_group(
+     match_all = [
+         ":is_windows",
+         ":is_ia32",
++        ":is_compiler_default",
+     ],
+ )
+ 
+@@ -286,6 +288,34 @@ selects.config_setting_group(
+     match_all = [
+         ":is_windows",
+         ":is_arm64",
++        ":is_compiler_default",
++    ],
++)
++
++selects.config_setting_group(
++    name = "is_windows_clang_asm_x64",
++    match_all = [
++        ":is_windows",
++        ":is_x64",
++        ":is_compiler_clang_cl",
++    ],
++)
++
++selects.config_setting_group(
++    name = "is_windows_clang_asm_ia32",
++    match_all = [
++        ":is_windows",
++        ":is_ia32",
++        ":is_compiler_clang_cl",
++    ],
++)
++
++selects.config_setting_group(
++    name = "is_windows_clang_asm_arm64",
++    match_all = [
++        ":is_windows",
++        ":is_arm64",
++        ":is_compiler_clang_cl",
+     ],
+ )
+ 
+@@ -319,6 +349,13 @@ config_setting(
+     },
+ )
+ 
++config_setting(
++    name = "is_compiler_clang_cl",
++    flag_values = {
++        "@bazel_tools//tools/cpp:compiler": "clang-cl",
++    },
++)
++
+ selects.config_setting_group(
+     name = "is_clang",
+     match_any = [
+diff --git a/bazel/defs.bzl b/bazel/defs.bzl
+index bbe1495f0b3044143df9de453d75219f92134ec2..233985667e85b6c06ccfafd94a659879526603e9 100644
+--- a/bazel/defs.bzl
++++ b/bazel/defs.bzl
+@@ -125,6 +125,24 @@ def _default_args():
+                 "-Wno-non-virtual-dtor",
+                 "-isystem .",
+             ],
++            "@v8//bazel/config:is_windows": [
++                ## From BUILD.gn: `if (is_win)`
++                "/wd4245",
++                "/wd4267",
++                "/wd4324",
++                "/wd4701",
++                "/wd4702",
++                "/wd4703",
++                "/wd4709",
++                "/wd4714",
++                "/wd4715",
++                "/wd4718",
++                "/wd4723",
++                "/wd4724",
++                "/wd4800",
++                ## From BUILD.icu
++                "/wd4005",
++            ],
+             "//conditions:default": [],
+         }) + select({
+             "@v8//bazel/config:is_clang": [
+@@ -174,13 +192,23 @@ def _default_args():
+             ],
+             "//conditions:default": [
+             ],
++        }) + select({
++            "@v8//bazel/config:is_compiler_clang_cl": [
++                "-Wno-invalid-offsetof",
++            ],
++            "//conditions:default": [],
+         }),
+         includes = ["include"],
+         linkopts = select({
+             "@v8//bazel/config:is_windows": [
++                # Increase the initial stack size. The default is 1MB, this is 2MB. This
++                # applies only to executables and shared libraries produced by V8 since
++                # ldflags are not pushed to dependants.
++                "/STACK:2097152",
+                 "Winmm.lib",
+                 "DbgHelp.lib",
+                 "Advapi32.lib",
++                "Shell32.lib",
+             ],
+             "@v8//bazel/config:is_macos": ["-pthread"],
+             "//conditions:default": ["-Wl,--no-as-needed -ldl -latomic -pthread"],

@@ -1,0 +1,174 @@
+// Copyright (c) 2017-2022 Cloudflare, Inc.
+// Licensed under the Apache 2.0 license found in the LICENSE file or at:
+//     https://opensource.org/licenses/Apache-2.0
+
+#pragma once
+
+#include <workerd/io/compatibility-date.capnp.h>
+#include <workerd/jsg/jsg.h>
+
+namespace workerd::api {
+
+class ReadableStream;
+class File;
+
+// An implementation of the Web Platform Standard Blob API
+class Blob: public jsg::Object {
+ public:
+  // Creates an empty Blob
+  Blob(kj::String type);
+  Blob(jsg::Lock& js, jsg::JsBufferSource data, kj::String type);
+  Blob(jsg::Ref<Blob> parent, kj::ArrayPtr<const byte> data, kj::String type);
+
+  kj::ArrayPtr<const byte> getData() const KJ_LIFETIMEBOUND;
+
+  // ---------------------------------------------------------------------------
+  // JS API
+
+  struct Options {
+    jsg::Optional<kj::String> type;
+    jsg::Unimplemented endings;
+
+    JSG_STRUCT(type, endings);
+  };
+
+  using BitsValue = kj::OneOf<jsg::JsBufferSource, kj::String, jsg::Ref<Blob>>;
+  using Bits = kj::Array<BitsValue>;
+
+  static jsg::Ref<Blob> constructor(
+      jsg::Lock& js, jsg::Optional<Bits> bits, jsg::Optional<Options> options);
+
+  int getSize() const {
+    return data.size();
+  }
+  kj::StringPtr getType() const KJ_LIFETIMEBOUND {
+    return type;
+  }
+
+  jsg::Ref<Blob> slice(jsg::Lock& js,
+      jsg::Optional<int> start,
+      jsg::Optional<int> end,
+      jsg::Optional<kj::String> type);
+
+  // Each of the consumption methods (arrayBuffer, bytes, text) create copies of
+  // the Blob's underlying data.
+  jsg::Promise<jsg::JsRef<jsg::JsArrayBuffer>> arrayBuffer(jsg::Lock& js);
+  jsg::Promise<jsg::JsRef<jsg::JsUint8Array>> bytes(jsg::Lock& js);
+  jsg::Promise<jsg::JsRef<jsg::JsString>> text(jsg::Lock& js);
+  jsg::Ref<ReadableStream> stream(jsg::Lock& js);
+
+  JSG_RESOURCE_TYPE(Blob, CompatibilityFlags::Reader flags) {
+    if (flags.getJsgPropertyOnPrototypeTemplate()) {
+      JSG_READONLY_PROTOTYPE_PROPERTY(size, getSize);
+      JSG_READONLY_PROTOTYPE_PROPERTY(type, getType);
+    } else {
+      JSG_READONLY_INSTANCE_PROPERTY(size, getSize);
+      JSG_READONLY_INSTANCE_PROPERTY(type, getType);
+    }
+
+    JSG_METHOD(slice);
+    JSG_METHOD(arrayBuffer);
+    JSG_METHOD(bytes);
+    JSG_METHOD(text);
+    JSG_METHOD(stream);
+
+    JSG_TS_OVERRIDE({
+      bytes(): Promise<Uint8Array>;
+      arrayBuffer(): Promise<ArrayBuffer>;
+    });
+  }
+
+  void visitForMemoryInfo(jsg::MemoryTracker& tracker) const {
+    KJ_SWITCH_ONEOF(ownData) {
+      KJ_CASE_ONEOF(_, Empty) {}
+      KJ_CASE_ONEOF(data, jsg::JsRef<jsg::JsBufferSource>) {
+        tracker.trackField("ownData", data);
+      }
+      KJ_CASE_ONEOF(data, jsg::Ref<Blob>) {
+        tracker.trackField("ownData", data);
+      }
+    }
+    tracker.trackField("type", type);
+  }
+
+ private:
+  // Sentinel type for the case where the Blob is just ... empty.
+  struct Empty {};
+
+  kj::OneOf<Empty, jsg::JsRef<jsg::JsBufferSource>, jsg::Ref<Blob>> ownData;
+  kj::ArrayPtr<const byte> data;
+  kj::String type;
+
+  void visitForGc(jsg::GcVisitor& visitor) {
+    KJ_SWITCH_ONEOF(ownData) {
+      KJ_CASE_ONEOF(_, Empty) {}
+      KJ_CASE_ONEOF(b, jsg::JsRef<jsg::JsBufferSource>) {
+        visitor.visit(b);
+      }
+      KJ_CASE_ONEOF(b, jsg::Ref<Blob>) {
+        visitor.visit(b);
+      }
+    }
+  }
+
+  // this could just be "friend File;", but clang-cl wants to see the qualified name here.
+  friend class ::workerd::api::File;
+};
+
+// An implementation of the Web Platform Standard File API
+class File: public Blob {
+ public:
+  // Creates a zero-length File
+  File(kj::String name, kj::String type, double lastModified);
+  File(jsg::Lock& js,
+      jsg::JsBufferSource data,
+      kj::String name,
+      kj::String type,
+      double lastModified);
+  File(jsg::Ref<Blob> parent,
+      kj::ArrayPtr<const byte> data,
+      kj::String name,
+      kj::String type,
+      double lastModified);
+
+  struct Options {
+    jsg::Optional<kj::String> type;
+    jsg::Optional<double> lastModified;
+    jsg::Unimplemented endings;
+
+    JSG_STRUCT(type, lastModified, endings);
+  };
+
+  static jsg::Ref<File> constructor(
+      jsg::Lock& js, jsg::Optional<Bits> bits, kj::String name, jsg::Optional<Options> options);
+
+  kj::StringPtr getName() {
+    return name;
+  }
+  double getLastModified() {
+    return lastModified;
+  }
+
+  JSG_RESOURCE_TYPE(File, CompatibilityFlags::Reader flags) {
+    JSG_INHERIT(Blob);
+    if (flags.getJsgPropertyOnPrototypeTemplate()) {
+      JSG_READONLY_PROTOTYPE_PROPERTY(name, getName);
+      JSG_READONLY_PROTOTYPE_PROPERTY(lastModified, getLastModified);
+    } else {
+      JSG_READONLY_INSTANCE_PROPERTY(name, getName);
+      JSG_READONLY_INSTANCE_PROPERTY(lastModified, getLastModified);
+    }
+  }
+
+  void visitForMemoryInfo(jsg::MemoryTracker& tracker) const {
+    tracker.trackField("name", name);
+  }
+
+ private:
+  kj::String name;
+  double lastModified;
+};
+
+#define EW_BLOB_ISOLATE_TYPES api::Blob, api::Blob::Options, api::File, api::File::Options
+
+}  // namespace workerd::api
