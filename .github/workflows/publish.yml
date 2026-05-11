@@ -1,0 +1,76 @@
+name: Publish Website
+
+on:
+  push:
+    branches: [main]
+
+# Ensure only one workflow runs at a time
+concurrency:
+  group: "publish"
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          bun install
+
+      - name: Cache Astro resources
+        uses: actions/cache@v4
+        with:
+          path: |
+            alchemy-web/.astro
+          key: ${{ runner.os }}-astro-cache
+
+      - name: Get Astro version
+        id: astro-version
+        run: echo "version=$(bun info astro version)" >> $GITHUB_OUTPUT
+
+      - name: Cache Astro cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            alchemy-web/node_modules/.astro
+            alchemy-web/.astro
+          key: astro-cache-${{ steps.astro-version.outputs.version }}
+
+      - name: Check Types and Lint
+        run: |
+          bun run build
+          bun run check
+
+      - name: Install Playwright Browsers
+        run: bun playwright install --with-deps chromium
+        working-directory: alchemy-web
+
+      - name: Deploy Website
+        id: deploy
+        run: |
+          bun run build
+          bun install # to install the built `alchemy` CLI
+          bun deploy:website
+        env:
+          ALCHEMY_PASSWORD: ${{ secrets.ALCHEMY_PASSWORD }}
+          ALCHEMY_STATE_STORE: cloudflare
+          ALCHEMY_STATE_TOKEN: ${{ secrets.ALCHEMY_STATE_TOKEN }}
+          AWS_REGION: us-west-2
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          GENERATE_OG_IMAGES: true
+          STAGE: prod
+          DO_NOT_TRACK: 1

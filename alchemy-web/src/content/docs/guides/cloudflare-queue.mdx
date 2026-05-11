@@ -1,0 +1,139 @@
+---
+title: Queue
+description: Learn how to create, configure, and use Cloudflare Queues for background job processing in your Worker applications managed by Alchemy.
+sidebar:
+  order: 1.3
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+This guide explains how to create and use Cloudflare Queues with your Worker applications.
+
+:::note
+This is a step-by-step guide to set up Queue producers and consumers, for a complete API reference see the [Queue Provider](/providers/cloudflare/queue).
+:::
+
+<Steps>
+
+1. **Create a Queue**
+
+   Create a Queue with a type for the message payload:
+
+   ```ts
+   import { Queue } from "alchemy/cloudflare";
+
+   // Define the message payload type
+   export const queue = await Queue<{
+     name: string;
+     email: string;
+   }>("my-worker-queue");
+   ```
+
+2. **Set up Producer (Send Messages)**
+
+   Bind the Queue to your Worker as an environment variable to send messages:
+
+   ```ts
+   import { Worker } from "alchemy/cloudflare";
+
+   export const worker = await Worker("my-worker", {
+     entrypoint: "./src/worker.ts",
+     bindings: {
+       QUEUE: queue, // Bind queue as QUEUE environment variable
+     },
+   });
+   ```
+
+3. **Send Messages from Worker**
+
+   Access the Queue from your Worker's fetch handler to send messages:
+
+   ```ts
+   // src/worker.ts
+   import type { worker } from "../alchemy.run";
+
+   export default {
+     async fetch(request: Request, env: typeof worker.Env) {
+       // Send a message to the queue
+       await env.QUEUE.send({
+         name: "John Doe",
+         email: "john.doe@example.com",
+       });
+       
+       return new Response("Ok");
+     },
+   };
+   ```
+
+4. **Set up Consumer (Process Messages)**
+
+   Register your Worker as a consumer of the Queue by adding it to eventSources:
+
+   ```ts
+   export const worker = await Worker("my-worker", {
+     entrypoint: "./src/worker.ts",
+     bindings: {
+       QUEUE: queue,
+     },
+     // Add the queue as an event source to consume messages
+     eventSources: [queue],
+   });
+   ```
+
+5. **Process Messages in Worker**
+
+   Implement the queue handler using a type-safe batch parameter:
+
+   ```ts
+   // src/worker.ts
+   import type { queue, worker } from "../alchemy.run";
+
+   export default {
+     // Producer: send messages
+     async fetch(request: Request, env: typeof worker.Env) {
+       await env.QUEUE.send({
+         name: "John Doe",
+         email: "john.doe@example.com",
+       });
+       return new Response("Ok");
+     },
+     
+     // Consumer: process messages with type safety
+     async queue(batch: typeof queue.Batch, env: typeof worker.Env) {
+       // Process each message in the batch
+       for (const message of batch.messages) {
+         console.log(message);
+         // Acknowledge individual message
+         message.ack();
+       }
+       
+       // Or acknowledge all messages at once
+       // batch.ackAll();
+     },
+   };
+   ```
+
+   :::tip
+   Using `typeof queue.Batch` provides better type safety than generic types, as it directly references the typed queue you created.
+   :::
+
+6. **(Optional) Configure Consumer Settings**
+
+   You can customize how your Worker consumes messages by providing settings:
+
+   ```ts
+   export const worker = await Worker("my-worker", {
+     entrypoint: "./src/worker.ts",
+     eventSources: [{
+       queue,
+       settings: {
+         batchSize: 25,           // Process 25 messages at once
+         maxConcurrency: 5,       // Allow 5 concurrent invocations  
+         maxRetries: 3,           // Retry failed messages up to 3 times
+         maxWaitTimeMs: 1500,     // Wait up to 1.5 seconds to fill a batch
+       }
+     }]
+   });
+   ```
+
+</Steps>

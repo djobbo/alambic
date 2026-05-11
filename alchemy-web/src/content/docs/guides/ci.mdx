@@ -1,0 +1,284 @@
+---
+title: Continuous Integration
+description: Set up CI/CD pipelines for Alchemy projects with GitHub Actions, automated deployments, and PR previews.
+sidebar:
+  order: 0
+---
+
+import { Code, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+import yaml from "yaml";
+
+export function DeployWorkflow({ manager = "bun" }) {
+  const managers = {
+    bun: {
+      setup: [
+        {
+          name: "Setup Bun",
+          uses: "oven-sh/setup-bun@v2",
+        },
+      ],
+      install: "bun install",
+      run: "bun alchemy",
+      destroy: "bun alchemy",
+    },
+    npm: {
+      setup: [
+        {
+          name: "Setup Node.js",
+          uses: "actions/setup-node@v4",
+          with: {
+            "node-version": "24",
+          },
+        },
+      ],
+      install: "npm ci",
+      run: "npx alchemy",
+      destroy: "npx alchemy",
+    },
+    pnpm: {
+      // see: https://github.com/pnpm/action-setup?tab=readme-ov-file#use-cache-to-reduce-installation-time
+      setup: [
+        {
+          name: "Setup pnpm",
+          uses: "pnpm/action-setup@v4",
+          with: {
+            version: "10",
+            run_install: false,
+          },
+        },
+        {
+          name: "Setup Node.js",
+          uses: "actions/setup-node@v4",
+          with: {
+            "node-version": "24",
+            cache: "pnpm",
+          },
+        },
+      ],
+      install: "pnpm install",
+      run: "pnpm dlx alchemy",
+      destroy: "pnpm dlx alchemy",
+    },
+    yarn: {
+      setup: [
+        {
+          name: "Setup Node.js",
+          uses: "actions/setup-node@v4",
+          with: {
+            "node-version": "24",
+            cache: "yarn",
+          },
+        },
+        {
+          name: "Install yarn",
+          run: "npm install -g yarn",
+        },
+      ],
+      install: "yarn install",
+      run: "yarn dlx alchemy",
+      destroy: "yarn dlx alchemy",
+    },
+  };
+
+  const cfg = managers[manager] || managers.bun;
+
+  const content = yaml.stringify({
+    name: "Deploy Application",
+    on: {
+      push: {
+        branches: ["main"],
+      },
+      pull_request: {
+        types: ["opened", "reopened", "synchronize", "closed"],
+      },
+    },
+    concurrency: {
+      group: "deploy-${{ github.ref }}",
+      "cancel-in-progress": false,
+    },
+    env: {
+      STAGE:
+        "${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || (github.ref == 'refs/heads/main' && 'prod' || github.ref_name) }}",
+    },
+    jobs: {
+      deploy: {
+        if: "${{ github.event.action != 'closed' }}",
+        "runs-on": "ubuntu-latest",
+        permissions: {
+          contents: "read",
+          "pull-requests": "write",
+        },
+        steps: [
+          {
+            uses: "actions/checkout@v4",
+          },
+          ...cfg.setup,
+          {
+            name: "Install dependencies",
+            run: cfg.install,
+          },
+          {
+            name: "Deploy",
+            run: `${cfg.run} deploy --stage \${{ env.STAGE }}`,
+            env: {
+              ALCHEMY_PASSWORD: "${{ secrets.ALCHEMY_PASSWORD }}",
+              ALCHEMY_STATE_TOKEN: "${{ secrets.ALCHEMY_STATE_TOKEN }}",
+              CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+              CLOUDFLARE_EMAIL: "${{ secrets.CLOUDFLARE_EMAIL }}",
+              PULL_REQUEST: "${{ github.event.number }}",
+              GITHUB_SHA: "${{ github.sha }}",
+              GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}",
+            },
+          },
+        ],
+      },
+      cleanup: {
+        "runs-on": "ubuntu-latest",
+        if: "${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}",
+        permissions: {
+          "id-token": "write",
+          contents: "read",
+          "pull-requests": "write",
+        },
+        steps: [
+          {
+            uses: "actions/checkout@v4",
+          },
+          ...cfg.setup,
+          {
+            name: "Install dependencies",
+            run: cfg.install,
+          },
+          {
+            name: "Safety Check",
+            run: `if [ "\${{ env.STAGE }}" = "prod" ]; then
+  echo "ERROR: Cannot destroy prod environment in cleanup job"
+  exit 1
+fi`,
+          },
+          {
+            name: "Destroy Preview Environment",
+            run: `${cfg.destroy} destroy --stage \${{ env.STAGE }}`,
+            env: {
+              ALCHEMY_PASSWORD: "${{ secrets.ALCHEMY_PASSWORD }}",
+              ALCHEMY_STATE_TOKEN: "${{ secrets.ALCHEMY_STATE_TOKEN }}",
+              CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+              CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+              CLOUDFLARE_EMAIL: "${{ secrets.CLOUDFLARE_EMAIL }}",
+              PULL_REQUEST: "${{ github.event.number }}",
+            },
+          },
+        ],
+      },
+    },
+  }, { aliasDuplicateObjects: false });
+
+  return <Code lang="yaml" code={content} />;
+}
+
+Set up preview deployments and continuous integration for your Alchemy projects using GitHub Actions.
+
+As part of this guide, we'll:
+1. Add a Github Workflow to deploy your `prod` stage from the `main` branch
+2. Deploy a preview `pr-<number>` stage for each Pull Request
+3. Update your `alchemy.run.ts` script to add a Github Comment to the PR with the preview URL
+
+<Steps>
+
+1. **Configure environment variables**
+
+   Set up required secrets in your GitHub repository settings (Settings → Secrets and variables → Actions):
+
+   ```bash
+   ALCHEMY_PASSWORD=your-encryption-password
+   ALCHEMY_STATE_TOKEN=your-state-token
+   CLOUDFLARE_API_TOKEN=your-cloudflare-api-token
+   CLOUDFLARE_ACCOUNT_ID=your-cloudflare-account-id
+   CLOUDFLARE_EMAIL=your-cloudflare-email
+   ```
+
+   :::tip
+   1. See the [Cloudflare Auth Guide](/guides/cloudflare#api-token) if you don't have a `CLOUDFLARE_API_TOKEN`. We reccomend using our cli to create a token matching your alchemy profile.
+   2. See the [Cloudflare State Store Guide](/guides/cloudflare-state-store) if you don't have a `ALCHEMY_STATE_TOKEN`
+   3. See the [Cloudflare find account id](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/) for getting account id if you dont know it.
+   :::
+
+2. **Set up preview environments in your Alchemy script**
+
+   Update your `alchemy.run.ts` to support multiple stages, use the [CloudflareStateStore](/guides/cloudflare-state-store) and add a [GithubComment](/providers/github/comment) to the PR with the preview URL:
+
+   ```diff lang='ts'
+   import alchemy from "alchemy";
+   import { Worker, Vite } from "alchemy/cloudflare";
+   import { GitHubComment } from "alchemy/github";
+   import { CloudflareStateStore } from "alchemy/state";
+   
+   const app = await alchemy("my-app", {
+   +  stateStore: (scope) => new CloudflareStateStore(scope),
+   });
+   
+   // your website may be different, we use Vite for illustration purposes
+   const website = await Vite("website");
+   
+   console.log(`🚀 Deployed to: https://${website.url}`);
+
+   +if (process.env.PULL_REQUEST) {
+   +  // if this is a PR, add a comment to the PR with the preview URL
+   +  // it will auto-update with each push
+   +  await GitHubComment("preview-comment", {
+   +    owner: "your-username",
+   +    repository: "your-repo",
+   +    issueNumber: Number(process.env.PULL_REQUEST),
+   +    body: `## 🚀 Preview Deployed
+   +
+   +Your changes have been deployed to a preview environment:
+   +
+   +**🌐 Website:** ${website.url}
+   +
+   +Built from commit ${process.env.GITHUB_SHA?.slice(0, 7)}
+   +
+   +---
+   +<sub>🤖 This comment updates automatically with each push.</sub>`,
+   +  });
+   +}
+   
+   await app.finalize();
+   ```
+
+3. **Create deployment workflow**
+
+   Create `.github/workflows/deploy.yml` with a workflow for deploying your `prod` stage from the `main` branch and a preview `pr-<number>` stage for each Pull Request:
+
+   <Tabs syncKey="pkgManager">
+     <TabItem label="bun">
+       <DeployWorkflow manager="bun" />
+     </TabItem>
+     <TabItem label="npm">
+       <DeployWorkflow manager="npm" />
+     </TabItem>
+     <TabItem label="pnpm">
+       <DeployWorkflow manager="pnpm" />
+     </TabItem>
+     <TabItem label="yarn">
+       <DeployWorkflow manager="yarn" />
+     </TabItem>
+   </Tabs>
+
+   :::note[Important: STAGE Variable Logic]
+   The workflow uses a specific `STAGE` environment variable logic to ensure preview environments are correctly identified:
+   
+   ```yaml
+   env:
+     STAGE: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || (github.ref == 'refs/heads/main' && 'prod' || github.ref_name) }}
+   ```
+   
+   This ensures that:
+   - All pull request events (including when merged/closed) use `pr-{number}` format
+   - Pushes to `main` branch use `prod`
+   - Other branches use the branch name
+   
+   Additionally, the cleanup job includes a safety check to prevent accidental destruction of the production environment.
+   :::
+
+</Steps>
+

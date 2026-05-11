@@ -1,0 +1,230 @@
+---
+title: AI Search
+description: Learn how to deploy a knowledge base with Cloudflare AI Search and a Worker using Alchemy.
+sidebar:
+  order: 15
+---
+
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+This guide walks you through creating an AI Search knowledge base with a Cloudflare Worker that provides semantic search and RAG-powered chat completions.
+
+:::note
+For complete API references, see the [AiSearch](/providers/cloudflare/ai-search) and [AiSearchNamespace](/providers/cloudflare/ai-search-namespace) documentation.
+:::
+
+:::caution[Requirements]
+- `@cloudflare/workers-types` ≥ `4.20260417.1`
+
+AI Search bindings are not natively supported by Miniflare; in `alchemy dev` they are proxied to the deployed instance via the `remote-binding-proxy` worker. If you haven't deployed yet, the binding will error until the first deploy.
+:::
+
+<Steps>
+
+1. **Install Dependencies**
+
+   <Tabs syncKey="pkgManager">
+     <TabItem label="bun">
+       ```sh
+       bun add alchemy
+       ```
+     </TabItem>
+     <TabItem label="npm">
+       ```sh
+       npm install alchemy
+       ```
+     </TabItem>
+     <TabItem label="pnpm">
+       ```sh
+       pnpm add alchemy
+       ```
+     </TabItem>
+     <TabItem label="yarn">
+       ```sh
+       yarn add alchemy
+       ```
+     </TabItem>
+   </Tabs>
+
+2. **Credentials**
+
+   Set your Cloudflare API token in your environment:
+
+   ```sh
+   export CLOUDFLARE_API_TOKEN=your-api-token
+   ```
+
+   You can create a user API token at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) with the **AI Search Edit** and **Workers Scripts Edit** permissions. (This is the token Alchemy uses to manage AI Search instances; it is separate from the service token Cloudflare provisions internally to grant AI Search access to an R2 bucket — see [Service Token](/providers/cloudflare/ai-search#service-token) in the AiSearch reference.)
+
+3. **Create `alchemy.run.ts`**
+
+   Create a deployment script that provisions an AI Search instance and a Worker:
+
+   ```ts title="alchemy.run.ts"
+   import alchemy from "alchemy";
+   import { AiSearch, AiSearchNamespace, Worker } from "alchemy/cloudflare";
+
+   const app = await alchemy("ai-search-app");
+
+   // Create a namespace for organizing instances
+   const ns = await AiSearchNamespace("docs", {
+     name: "my-docs",
+     adopt: true,
+   });
+
+   // Create an AI Search instance (built-in storage, no R2 needed)
+   const search = await AiSearch("knowledge-base", {
+     name: "knowledge-base",
+     adopt: true,
+   });
+
+   // Deploy a Worker with both binding types.
+   export const worker = await Worker("api", {
+     entrypoint: "./src/worker.ts",
+     url: true,
+     bindings: {
+       SEARCH: search, // Single instance binding
+       DOCS: ns,        // Namespace binding for dynamic access
+     },
+   });
+
+   console.log({ url: worker.url });
+
+   await app.finalize();
+   ```
+
+4. **Implement the Worker**
+
+   Create a Worker that handles search queries, file uploads, and chat completions:
+
+   ```ts title="src/worker.ts"
+   import type { worker } from "../alchemy.run";
+
+   export default {
+     async fetch(request: Request, env: typeof worker.Env): Promise<Response> {
+       const url = new URL(request.url);
+
+       // Upload a document
+       if (url.pathname === "/upload" && request.method === "POST") {
+         const formData = await request.formData();
+         const file = formData.get("file") as File;
+         if (!file) return new Response("No file", { status: 400 });
+
+         const item = await env.SEARCH.items.upload(file.name, file);
+         return Response.json({ uploaded: item });
+       }
+
+       // Search — simple lookup uses `query`.
+       if (url.pathname === "/search") {
+         const query = url.searchParams.get("q");
+         if (!query) return new Response("?q= required", { status: 400 });
+
+         const results = await env.SEARCH.search({ query });
+         return Response.json(results);
+       }
+
+       // Chat completions (streaming) — chat-style context uses `messages`.
+       if (url.pathname === "/chat") {
+         const query = url.searchParams.get("q");
+         if (!query) return new Response("?q= required", { status: 400 });
+
+         const stream = await env.SEARCH.chatCompletions({
+           messages: [{ role: "user", content: query }],
+           stream: true,
+         });
+
+         return new Response(stream, {
+           headers: { "content-type": "text/event-stream" },
+         });
+       }
+
+       // List instances in namespace
+       if (url.pathname === "/instances") {
+         const list = await env.DOCS.list();
+         return Response.json(list);
+       }
+
+       return new Response(
+         "Endpoints:\n" +
+         "  POST /upload     — Upload a document\n" +
+         "  GET  /search?q=  — Search documents\n" +
+         "  GET  /chat?q=    — Chat with documents (streaming)\n" +
+         "  GET  /instances  — List AI Search instances\n",
+       );
+     },
+   };
+   ```
+
+5. **Deploy**
+
+   Run the `alchemy.run.ts` script to deploy:
+
+   <Tabs syncKey="pkgManager">
+     <TabItem label="bun">
+       ```sh
+       bun ./alchemy.run
+       ```
+     </TabItem>
+     <TabItem label="npm">
+       ```sh
+       npx tsx ./alchemy.run
+       ```
+     </TabItem>
+     <TabItem label="pnpm">
+       ```sh
+       pnpm tsx ./alchemy.run
+       ```
+     </TabItem>
+     <TabItem label="yarn">
+       ```sh
+       yarn tsx ./alchemy.run
+       ```
+     </TabItem>
+   </Tabs>
+
+   It should log out the Worker URL:
+   ```sh
+   { url: "https://api.your-subdomain.workers.dev" }
+   ```
+
+6. **Upload and Search**
+
+   Upload a document and search it:
+
+   ```sh
+   # Upload a document
+   curl -F "file=@guide.pdf" https://api.your-subdomain.workers.dev/upload
+
+   # Search (wait a moment for indexing)
+   curl "https://api.your-subdomain.workers.dev/search?q=how+does+caching+work"
+
+   # Chat with streaming response
+   curl "https://api.your-subdomain.workers.dev/chat?q=explain+caching"
+   ```
+
+7. **Tear Down**
+
+   <Tabs syncKey="pkgManager">
+     <TabItem label="bun">
+       ```sh
+       bun ./alchemy.run --destroy
+       ```
+     </TabItem>
+     <TabItem label="npm">
+       ```sh
+       npx tsx ./alchemy.run --destroy
+       ```
+     </TabItem>
+     <TabItem label="pnpm">
+       ```sh
+       pnpm tsx ./alchemy.run --destroy
+       ```
+     </TabItem>
+     <TabItem label="yarn">
+       ```sh
+       yarn tsx ./alchemy.run --destroy
+       ```
+     </TabItem>
+   </Tabs>
+
+</Steps>
