@@ -50,40 +50,20 @@ const config :Workerd.Config = (
 );
 `.trimStart();
 
-type BundledFile = {
+type BundledOutput = {
   readonly fileName: string;
-  readonly contentBase64: string;
+  /** UTF-8 source written via Dokploy file mounts (one API call per file avoids huge single payloads). */
+  readonly content: string;
 };
 
-const toBase64 = (source: string | Uint8Array): string =>
-  Buffer.from(typeof source === "string" ? source : source).toString("base64");
-
-const bootstrapBundleScript = `
-import fs from "node:fs/promises";
-import path from "node:path";
-
-const root = "/app/src";
-const manifestPath = "/app/bundle-manifest.json";
-
-const main = async () => {
-  const manifestRaw = await fs.readFile(manifestPath, "utf8");
-  const manifest = JSON.parse(manifestRaw);
-  if (!manifest || !Array.isArray(manifest.files)) {
-    throw new Error("Alambic.Dokploy.Worker: invalid bundle manifest");
-  }
-
-  for (const file of manifest.files) {
-    if (!file || typeof file.fileName !== "string" || typeof file.contentBase64 !== "string") {
-      throw new Error("Alambic.Dokploy.Worker: invalid bundled file entry");
-    }
-    const absPath = path.join(root, file.fileName);
-    await fs.mkdir(path.dirname(absPath), { recursive: true });
-    await fs.writeFile(absPath, Buffer.from(file.contentBase64, "base64"));
-  }
+const bundleOutputContent = (
+  output: { type: "chunk"; code: string } | { type: "asset"; source: string | Uint8Array },
+): string => {
+  if (output.type === "chunk") return output.code;
+  const src = output.source;
+  if (typeof src === "string") return src;
+  return Buffer.from(src).toString("utf8");
 };
-
-await main();
-`.trimStart();
 
 const runWorkerScript = `
 import { spawnSync } from "node:child_process";
@@ -107,7 +87,6 @@ run("npm", [
   "--no-save",
   "workerd",
 ]);
-run("node", ["/app/bootstrap-bundle.mjs"]);
 run(prefix + "/node_modules/.bin/workerd", ["serve", "/app/workerd.capnp"]);
 `.trimStart();
 
@@ -151,18 +130,20 @@ const bundleMain = Effect.fn(function* (main: string) {
       );
     }
 
-    const files: BundledFile[] = generated.output.map((output) => {
+    const files: BundledOutput[] = [];
+    for (const output of generated.output) {
       if (output.type === "chunk") {
-        return {
-          fileName: output.fileName,
-          contentBase64: toBase64(output.code),
-        };
+        files.push({ fileName: output.fileName, content: output.code });
+      } else if (output.type === "asset") {
+        files.push({ fileName: output.fileName, content: bundleOutputContent(output) });
+      } else {
+        return yield* Effect.die(
+          new Error(
+            `Alambic.Dokploy.Worker: unsupported rolldown output type: ${String((output as { type?: string }).type)}`,
+          ),
+        );
       }
-      return {
-        fileName: output.fileName,
-        contentBase64: toBase64(output.source),
-      };
-    });
+    }
 
     return {
       entryFileName: entry.fileName,
@@ -193,7 +174,15 @@ export const Worker = Effect.fn(function* (id: string, props: WorkerProps) {
   const workerdConfig = defaultWorkerdConfig(entrypointFile, port, compatibilityDate);
   const image = yield* ImageTag(props.image ?? "node:24-bookworm");
 
-  const bundleManifest = JSON.stringify({ files: bundled.files });
+  const bundleVolumeMounts = bundled.files.map((f) => {
+    const rel = NodePath.posix.join("src", f.fileName.split(NodePath.sep).join(NodePath.posix.sep));
+    return {
+      type: "file" as const,
+      filePath: rel,
+      content: f.content,
+      mountPath: `/app/${rel}`,
+    };
+  });
 
   const baseService = {
     command: "node /app/run-worker.mjs",
@@ -206,22 +195,11 @@ export const Worker = Effect.fn(function* (id: string, props: WorkerProps) {
       },
       {
         type: "file",
-        filePath: "bootstrap-bundle.mjs",
-        content: bootstrapBundleScript,
-        mountPath: "/app/bootstrap-bundle.mjs",
-      },
-      {
-        type: "file",
-        filePath: "bundle-manifest.json",
-        content: bundleManifest,
-        mountPath: "/app/bundle-manifest.json",
-      },
-      {
-        type: "file",
         filePath: "workerd.capnp",
         content: workerdConfig,
         mountPath: "/app/workerd.capnp",
       },
+      ...bundleVolumeMounts,
     ],
   } satisfies NonNullable<ApplicationImageProps["service"]>;
 
