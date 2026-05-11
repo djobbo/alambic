@@ -41,4 +41,4 @@ jobs:
         run: pnpm run build:publishable
 
       - name: Publish preview packages
-        run: pnpx pkg-pr-new@0.0.62 publish --pnpm --comment=off ./packages/dokploy-api ./packages/alambic
+        run: pnpx pkg-pr-new@0.0.62 publish --pnpm ./packages/dokploy-api ./packages/alambic

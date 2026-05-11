@@ -1,33 +1,19 @@
-# Vite+ Monorepo Starter
+# Alambic
 
-A starter for creating a Vite+ monorepo.
+[![pkg.pr.new](https://pkg.pr.new/badge/djobbo/alambic)](https://pkg.pr.new/~/djobbo/alambic)
 
-## Vendored upstream (`.repos`)
+TypeScript monorepo for **Alchemy**-driven infrastructure and **Dokploy** client tooling. Published libraries include [`alambic`](./packages/alambic) (resources and helpers) and [`@alambic/dokploy-api`](./packages/dokploy-api) (generated OpenAPI client). Example apps under [`apps/`](./apps/) show deployment patterns.
 
-Squashed `git subtree` copies of upstream repositories live under [`.repos/`](.repos/). Use those trees as the **local source of truth** for implementation details and bundled documentation when working with the corresponding libraries or services in this monorepo (not only published packages or generic web search). Import and update procedure: [`.plans/vendored-repo-git-subtree.md`](.plans/vendored-repo-git-subtree.md).
+**Stack:** [Vite+](https://viteplus.dev/guide/) (`vp`), pnpm workspaces, Effect, and Alchemy. See [`AGENTS.md`](./AGENTS.md) for toolchain checklist, CI, releases, and optional pkg.pr.new snapshots.
 
 ## Development
 
-- Check everything is ready:
-
 ```bash
-vp run ready
+pnpm install
+pnpm run ready    # check, test, build (recursive)
+pnpm run dev      # website dev server
 ```
 
-- Run the tests:
+## Vendored upstream (`.repos`)
 
-```bash
-vp run -r test
-```
-
-- Build the monorepo:
-
-```bash
-vp run -r build
-```
-
-- Run the development server:
-
-```bash
-vp run dev
-```
+Optional squashed `git subtree` copies of upstream repos live under [`.repos/`](./.repos/). Workflow and update notes: [`.plans/vendored-repo-git-subtree.md`](./.plans/vendored-repo-git-subtree.md).
