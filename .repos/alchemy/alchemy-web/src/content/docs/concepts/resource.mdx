@@ -1,0 +1,304 @@
+---
+title: Resource
+description: Learn about Resources, the core building blocks of Alchemy.
+sidebar:
+  order: 0.1
+---
+
+Resources are the core building blocks of Alchemy. Each resource represents a piece of infrastructure or configuration that can be created, updated, and deleted automatically.
+
+## What is a Resource?
+
+A Resource is simply a memoized async function that implemented a lifecycle handler for three phases:
+1. `create` - what to do when first creating the resource
+2. `update` - what to do when updating a resource
+3. `delete` - what to when deleting a resource
+
+## Resource ID
+
+When creating a resource, you always pass an `id` that is unique within the Resource's [Scope](/concepts/scope).
+
+```ts
+await MyResource("id")
+```
+
+This ID is what Alchemy uses to track the state of the resource and trigger the appropriate create/update/delete phase.
+
+## Input Props
+
+Each Resource has an interface for its "input properties"
+
+```typescript
+export interface DatabaseProps {
+  name: string;
+  branchId: string;
+  projectId: string;
+  // Other properties...
+}
+```
+
+## Output Attributes
+
+Each Resource has an interface for its "output attributes":
+
+```typescript
+export interface Database extends DatabaseProps {
+  id: string;
+  createdAt: number;
+  // Additional properties...
+}
+```
+
+:::caution
+This interface must extend `Resource<..>`
+:::
+
+## Physical Name
+
+Depending on the Resource provider, a Resource may have a "physical name" that is used to identify the resource in the infrastructure provider.
+
+For example, a Cloudflare Worker name must be unique within a Cloudflare account.
+
+```typescript
+const worker = await Worker("worker1", {
+  name: "worker1", // <- physical name
+});
+```
+
+If you do not provide a physical name, Alchemy will generate a unique name for you based on the Application name, Resource ID, and Stage.
+
+```typescript
+const app = await alchemy("my-app");
+
+const worker = await Worker("worker1");
+
+console.log(worker.name); // "my-app-worker1-${stage}"
+```
+
+If you run this with `alchemy deploy --stage prod`, the worker name will be `my-app-worker1-prod`.
+
+## Provider
+
+Each Resource exports a "Provider" function with a globally unique name and an implementation of the lifecycle handler logic.
+
+```typescript
+export const Database = Resource(
+  "neon::Database",
+  async function(this: Context<Database>, id: string, props: DatabaseProps): Promise<Database> {
+    if (this.phase === "delete") {
+      // Delete resource logic
+      // ...
+      return this.destroy();
+    } else if (this.phase === "update") {
+      // Update resource logic
+      // ...
+      return {/* updated resource */};
+    } else {
+      // Create resource logic
+      // ...
+      return {/* new resource */};
+    }
+  }
+);
+```
+
+:::tip
+By Convention, the name of this exported `const` should match the name of your Resource's interface.
+:::
+
+Let's break this down a bit futher, since it may seem confusing at first.
+
+## Fully Qualified Name (FQN)
+
+Each Resource has a globally unique name (aka. fully qualified name), e.g `"neon:Database"`:
+
+```ts
+export const Database = Resource("neon::Database"),
+```
+
+Alchemy and uses this FQN to delete orphaned resources (stored in your [State](/concepts/state) files) by looking up the corresponding "provider".
+
+## Lifecycle Function
+
+The Resource's lifecycle handler is defined using an `async function` declaration with 3 required arguments:
+
+```ts
+async function(
+  // the resource's state/context is bound to `this`
+  this: Context<Database>, 
+  // the id of the resource (unique within a Scope)
+  id: string, 
+  // the input properties
+  props: DatabaseProps
+): Promise<Database>
+```
+
+:::caution
+It must be function declaration (not an arrow function) because the Resource's context is passed through as the `this: Context<Database>` parameter.
+:::
+
+## Lifecycle Phases
+
+The lifecycle handler is a simple function that handles the 3 phases: `"create"`, `"update"` or `"delete"`:
+
+```ts
+if (this.phase === "delete") {
+  // Delete resource logic
+  // ...
+  return this.destroy();
+} else if (this.phase === "update") {
+  // Update resource logic
+  // ...
+  return {/* updated properties */};
+} else {
+  // Create resource logic
+  // ...
+  return {/* initial properties */};
+}
+```
+
+## Create
+
+To construct the resource (including your properites and Alchemy's intrinsic properties), return `props` with your output properties:
+
+```ts
+return {/* updated properties */};
+```
+
+## Destroy
+
+When a resource is being deleted, you must return `this.destroy()` to signal that the resource deletion process is complete.
+
+:::tip
+This also enables type inference since `this.destroy()` returns `never`, so the type of the resource can be inferred from the return type of the function.
+:::
+
+## Destroy Strategy
+
+By default, Alchemy will destroy resources in a sequential order. You can change this behavior for a Resource by passing the `destroyStrategy` option to the Resource constructor.
+
+```ts
+const Database = Resource(
+  "neon::Database",
+  { destroyStrategy: "parallel" },
+  async function(this: Context<Database>, id: string, props: DatabaseProps): Promise<Database> {
+    if (this.phase === "delete") {
+      return this.destroy();
+    }
+    // these sub-resources will be deleted in parallel during the Database resource deletion
+    await SubResource("sub-resource", {});
+    await OtherResource("other-resource", {});
+  }
+);
+```
+
+:::tip
+You can also set the `destroyStrategy` option globally or within a Scope using `alchemy.run`. See [Scope](/concepts/scope#destroy-strategy) for more details.
+:::
+
+## Adoption
+
+When creating a resource, Alchemy will fail if a resource with the same name already exists. Resource adoption allows you to opt in to using the pre-existing resource instead.
+
+You can opt-in to adoption on a per-resource basis:
+
+```typescript
+// Without adoption - fails if bucket already exists
+const bucket = await R2Bucket("my-bucket", {
+  name: "existing-bucket",
+});
+
+// With adoption - uses existing bucket if it exists
+const bucket = await R2Bucket("my-bucket", {
+  name: "existing-bucket",
+  adopt: true,
+});
+```
+
+Or set `--adopt` to adopt all resources without changing code:
+```sh
+alchemy deploy --adopt
+```
+
+During the **create phase**, if a resource already exists:
+- **Without adoption** (default): Throws an "already exists" error
+- **With adoption**: Finds and adopts the existing resource
+
+## Replacement
+
+Sometimes it's impossible to UPDATE a resource (e.g., you cannot rename an R2 Bucket). In these cases, you need to perform a REPLACE operation to:
+
+1. create a new version of the Resource and update references
+2. delete the old version of the Resource (or leave it orphaned)
+
+#### Trigger Replacement
+
+During the **update phase**, you can trigger a replacement by calling `this.replace()`:
+
+```typescript
+// Implementation pattern
+if (this.phase === "update") {
+  if (this.output.name !== props.name) {
+    // trigger replace and terminate this "update" phase
+    this.replace();
+    // (unreachable code)
+  } else {
+    return updateResource();
+  }
+}
+```
+
+#### Create new
+
+After you call `this.replace()`, the "update" phase will terminate and be re-invoked with "create" (to create the new resource).
+
+```ts
+if (this.phase === "create") {
+  return createNewResource();
+}
+```
+
+#### Delete old
+
+After all downstream dependencies have been updated and you finally call `app.finalize()`, Alchemy will then invoke the "delete" phase on the old resource.
+
+```ts
+const app = await alchemy("app");
+
+// ... create resources
+
+await app.finalize(); // finalize scopes by deleting "orphaned" and "replaced" resources
+```
+
+#### Immediate replacement
+
+It is sometimes required to destory the old resource before creating the one, e.g. when updating a resource that requires a unique name.
+
+To address this you can trigger a replacement immediately by calling `this.replace(true)`. This will destroy the old resource before creating the new one.
+
+```ts
+this.replace(true);
+```
+
+:::caution
+`this.replace(true)` can cause downtime since a resource is deleted before the new one is created. Downtime can be avoided by appending a random string to the end of the resource name on the handler level, this creates different resource names and avoids the need to destroy the old resource prior to creating the new one.
+
+```ts
+const name = `${props.name}-${this.output?.slug ?? generateSlug()}`;
+
+if (this.phase === "update") {
+  if (this.output?.name === name) {
+    this.replace(); // don't need `true` here because name is unique
+  }
+}
+
+return {
+  ...props,
+  name,
+};
+```
+::: 
+
+## Testing
+
+See the [Testing](/concepts/testing) documentation for a comprehensive walkthrough on how to test your own resources.
