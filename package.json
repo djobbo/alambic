@@ -3,19 +3,28 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "pnpm": {
-    "onlyBuiltDependencies": ["msgpackr-extract", "workerd"]
-  },
   "scripts": {
     "ready": "vp check && vp run -r test && vp run -r build",
     "dev": "vp run website#dev",
-    "prepare": "vp config"
+    "prepare": "vp config",
+    "changeset": "changeset",
+    "changeset-version": "changeset version",
+    "changeset-publish": "pnpm run build:publishable && changeset publish",
+    "build:publishable": "pnpm --filter @alambic/dokploy-api run build && pnpm --filter alambic run build"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.30.0",
     "vite-plus": "catalog:"
   },
   "engines": {
     "node": ">=22.12.0"
   },
-  "packageManager": "pnpm@11.0.8"
+  "packageManager": "pnpm@11.0.8",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "msgpackr-extract",
+      "workerd"
+    ]
+  }
 }

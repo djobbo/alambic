@@ -10,6 +10,7 @@ import * as Redacted from "effect/Redacted";
 
 import * as Api from "./generated/DokployClient.ts";
 export { Api };
+export { DokployError } from "./generated/DokployClient.ts";
 
 /** Matches {@link DokployApi} URL normalization (`DOKPLOY_URL` trimming). */
 export const normalizeDokployBaseUrl = (url: string) => url.trim().replace(/\/+$/, "");

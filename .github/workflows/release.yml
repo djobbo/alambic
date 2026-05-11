@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+permissions: {}
+
+jobs:
+  release:
+    if: github.repository == 'djobbo/alambic' && github.ref == 'refs/heads/main'
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Upgrade npm for OIDC
+        run: npm install -g npm@latest
+
+      - name: Create Release Pull Request or Publish
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset-version
+          publish: pnpm changeset-publish
+          title: "chore: version packages"
+        env:
+          # Optional PAT with contents:write so the "Version Packages" PR triggers CI; default token often does not.
+          GITHUB_TOKEN: ${{ secrets.CHANGESET_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
