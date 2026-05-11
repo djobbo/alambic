@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Felix Hanau <felix@cloudflare.com>
+Date: Tue, 11 Apr 2023 14:41:31 -0400
+Subject: Disable bazel whole-archive build
+
+V8's bazel configuration system adds the alwayslink parameter (equivalent
+to --Wl,-whole-archive on Linux) to all V8 libraries, causing all V8
+object files to be included even if they are not referenced. This is more
+aggressive than what's done in the GN build system and not needed for
+workerd - disabling alwayslink improves the binary size by ~ 1MB as it
+allows the linker to eliminate unused symbols.
+
+Signed-off-by: James M Snell <jsnell@cloudflare.com>
+
+diff --git a/bazel/BUILD.icu b/bazel/BUILD.icu
+index 5fda2f468492a7a69266dba40c0862b0e31fa7a1..5127ceb7b783b11d5750c01977d7e34606c39667 100644
+--- a/bazel/BUILD.icu
++++ b/bazel/BUILD.icu
+@@ -54,7 +54,7 @@ cc_library(
+         "U_ICUDATAENTRY_IN_COMMON",
+     ],
+     tags = ["requires-rtti"],
+-    alwayslink = 1,
++    alwayslink = 0,
+ )
+ 
+ cc_library(
+@@ -78,7 +78,7 @@ cc_library(
+         "U_I18N_IMPLEMENTATION",
+     ],
+     deps = [":icuuc"],
+-    alwayslink = 1,
++    alwayslink = 0,
+ )
+ 
+ cc_library(

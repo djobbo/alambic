@@ -1,0 +1,37 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "memory-cache-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "memory-cache-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat"],
+        bindings = [
+          (name = "CACHE", memoryCache = (
+            limits = (
+              maxKeys = 2,
+              maxValueSize = 1024,
+              maxTotalValueSize = 2056,
+            ),
+          )),
+          (name = "CACHE2", memoryCache = (
+            limits = (
+              maxKeys = 2,
+              maxValueSize = 1024,
+              maxTotalValueSize = 2056,
+            ),
+          )),
+          (name = "CACHE3", memoryCache = (
+            limits = (
+              maxKeys = 2,
+              maxValueSize = 500,
+              maxTotalValueSize = 600,
+            ),
+          ))
+        ]
+      )
+    ),
+  ],
+);

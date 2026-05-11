@@ -1,0 +1,704 @@
+load("//:build/kj_test.bzl", "kj_test")
+load("//:build/wd_capnp_library.bzl", "wd_capnp_library")
+load("//:build/wd_cc_library.bzl", "wd_cc_library")
+load("//:build/wd_test.bzl", "wd_test")
+
+filegroup(
+    name = "srcs",
+    # Only add files here when needed: Where possible, new src/header files should be defined in
+    # their own targets, modularizing bazel targets makes incremental rebuilds faster.
+    srcs = [
+        "actor.c++",
+        "actor-state.c++",
+        "basics.c++",
+        "blob.c++",
+        "cache.c++",
+        "cf-property.c++",
+        "container.c++",
+        "events.c++",
+        "eventsource.c++",
+        "export-loopback.c++",
+        "filesystem.c++",
+        "form-data.c++",
+        "global-scope.c++",
+        "headers.c++",
+        "hibernatable-web-socket.c++",
+        "http.c++",
+        "messagechannel.c++",
+        "performance.c++",
+        "queue.c++",
+        "scheduled.c++",
+        "sockets.c++",
+        "sql.c++",
+        "sync-kv.c++",
+        "system-streams.c++",
+        "trace.c++",
+        "tracing.c++",
+        "unsafe.c++",
+        "url-standard.c++",
+        "web-socket.c++",
+        "worker-rpc.c++",
+    ] + glob(
+        [
+            "crypto/*.c++",
+            "streams/*.c++",
+        ],
+        exclude = [
+            "**/*test*.c++",
+            "crypto/crc-impl.c++",
+            "streams/compression.c++",
+            "streams/encoding.c++",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "hdrs",
+    srcs = [
+        "actor.h",
+        "actor-state.h",
+        "basics.h",
+        "blob.h",
+        "cache.h",
+        "cf-property.h",
+        "container.h",
+        "events.h",
+        "eventsource.h",
+        "export-loopback.h",
+        "filesystem.h",
+        "form-data.h",
+        "global-scope.h",
+        "headers.h",
+        "hibernatable-web-socket.h",
+        "http.h",
+        "messagechannel.h",
+        "performance.h",
+        "queue.h",
+        "scheduled.h",
+        "sockets.h",
+        "sql.h",
+        "sync-kv.h",
+        "system-streams.h",
+        "trace.h",
+        "tracing.h",
+        "unsafe.h",
+        "url-standard.h",
+        "web-socket.h",
+        "worker-rpc.h",
+    ] + glob(
+        [
+            "crypto/*.h",
+            "streams/*.h",
+        ],
+        exclude = [
+            "crypto/crc-impl.h",
+            "streams/compression.h",
+            "streams/encoding.h",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
+
+wd_cc_library(
+    name = "analytics-engine",
+    srcs = [
+        "analytics-engine.c++",
+    ],
+    hdrs = [
+        "analytics-engine.h",
+        "analytics-engine-impl.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "capnp",
+    srcs = [
+        "capnp.c++",
+    ],
+    hdrs = [
+        "capnp.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "worker-loader",
+    srcs = [
+        "worker-loader.c++",
+    ],
+    hdrs = [
+        "worker-loader.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "workers-module",
+    srcs = [
+        "workers-module.c++",
+    ],
+    hdrs = [
+        "workers-module.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "base64",
+    srcs = [
+        "base64.c++",
+    ],
+    hdrs = [
+        "base64.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/jsg",
+        "@simdutf",
+    ],
+)
+
+wd_cc_library(
+    name = "commonjs",
+    srcs = [
+        "commonjs.c++",
+    ],
+    hdrs = [
+        "commonjs.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "crypto-crc-impl",
+    srcs = [
+        "crypto/crc-impl.c++",
+    ],
+    hdrs = [
+        "crypto/crc-impl.h",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+wd_cc_library(
+    name = "fuzzilli",
+    srcs = [
+        "fuzzilli.c++",
+    ],
+    hdrs = [
+        "fuzzilli.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/api:util",
+        "//src/workerd/util:immediate-crash",
+    ],
+)
+
+wd_cc_library(
+    name = "kv",
+    srcs = [
+        "kv.c++",
+    ],
+    hdrs = [
+        "kv.h",
+    ],
+    implementation_deps = [
+        "//src/workerd/util:mimetype",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+# for using EW_STREAMS_ISOLATE_TYPES with workerd-api etc. To use the different streams APIs,
+# include the headers you need directly.
+wd_cc_library(
+    name = "streams",
+    hdrs = ["streams.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":streams-compression",
+        ":streams-encoding",
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "streams-compression",
+    srcs = ["streams/compression.c++"],
+    hdrs = ["streams/compression.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/util:state-machine",
+        "@nbytes",
+    ],
+)
+
+wd_cc_library(
+    name = "streams-encoding",
+    srcs = ["streams/encoding.c++"],
+    hdrs = ["streams/encoding.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "hibernation-event-params",
+    hdrs = ["hibernation-event-params.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@capnp-cpp//src/kj",
+    ],
+)
+
+wd_cc_library(
+    name = "r2",
+    srcs = glob(["r2*.c++"]),
+    hdrs = glob(["r2*.h"]),
+    implementation_deps = [
+        ":r2-api_capnp",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "memory-cache",
+    srcs = ["memory-cache.c++"],
+    hdrs = ["memory-cache.h"],
+    implementation_deps = [
+        "//src/workerd/io",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io:compatibility-date_capnp",
+        "//src/workerd/jsg",
+        "//src/workerd/util:checked-queue",
+        "//src/workerd/util:uuid",
+    ],
+)
+
+wd_cc_library(
+    name = "rtti",
+    srcs = [
+        "modules.c++",
+        "rtti.c++",
+    ],
+    hdrs = [
+        "modules.h",
+        "rtti.h",
+    ],
+    implementation_deps = [
+        ":analytics-engine",
+        ":kv",
+        ":pyodide",
+        ":streams",
+        ":streams-compression",
+        ":streams-encoding",
+        ":urlpattern",
+        ":urlpattern-standard",
+        ":worker-loader",
+        "//src/workerd/jsg:rtti",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":base64",
+        ":html-rewriter",
+        ":hyperdrive",
+        ":memory-cache",
+        ":r2",
+        ":workers-module",
+        "//src/cloudflare",
+        "//src/node",
+        "//src/pyodide",
+        "//src/workerd/api/node",
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "html-rewriter",
+    srcs = ["html-rewriter.c++"],
+    hdrs = ["html-rewriter.h"],
+    implementation_deps = [
+        "@com_cloudflare_lol_html//:lolhtml",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "hyperdrive",
+    srcs = ["hyperdrive.c++"],
+    hdrs = ["hyperdrive.h"],
+    implementation_deps = [
+        "//src/workerd/util:entropy",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io",
+    ],
+)
+
+wd_cc_library(
+    name = "pyodide",
+    srcs = [
+        "pyodide/pyodide.c++",
+        "pyodide/requirements.c++",
+    ],
+    hdrs = [
+        "pyodide/pyodide.h",
+        "pyodide/requirements.h",
+        "//src/pyodide:generated/pyodide_extra.capnp.h",
+        "//src/pyodide:pyodide_static.capnp.h",
+    ],
+    implementation_deps = [
+        "//src/workerd/io",
+        "//src/workerd/util:strings",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/pyodide:pyodide_extra_capnp",
+        "//src/pyodide:pyodide_static",
+        "//src/workerd/io:compatibility-date_capnp",
+        "//src/workerd/jsg",
+        "@capnp-cpp//src/kj:kj-async",
+        "@capnp-cpp//src/kj/compat:kj-gzip",
+        "@capnp-cpp//src/kj/compat:kj-http",
+        "@capnp-cpp//src/kj/compat:kj-tls",
+    ],
+)
+
+kj_test(
+    src = "pyodide/pyodide-test.c++",
+    deps = [":pyodide"],
+)
+
+wd_cc_library(
+    name = "util",
+    srcs = ["util.c++"],
+    hdrs = ["util.h"],
+    implementation_deps = [
+        "//src/workerd/util:mimetype",
+        "//src/workerd/util:strings",
+        "@simdutf",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/jsg",
+        "@capnp-cpp//src/kj",
+    ],
+)
+
+wd_cc_library(
+    name = "encoding",
+    srcs = [
+        "encoding.c++",
+        "encoding-legacy.c++",
+    ],
+    hdrs = [
+        "encoding.h",
+        "encoding-legacy.h",
+        "encoding-shared.h",
+    ],
+    implementation_deps = [
+        "//src/workerd/util:strings",
+        "@simdutf",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":util",
+        "//src/rust/encoding",
+        "//src/workerd/io:compatibility-date_capnp",
+        "//src/workerd/io:features",
+        "//src/workerd/jsg",
+        "@capnp-cpp//src/kj",
+        "@simdutf",
+        "@workerd-cxx//kj-rs",
+    ],
+)
+
+wd_cc_library(
+    name = "data-url",
+    srcs = ["data-url.c++"],
+    hdrs = ["data-url.h"],
+    implementation_deps = [
+        ":encoding",
+        "//src/workerd/util:strings",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/jsg:url",
+        "//src/workerd/util:mimetype",
+        "@capnp-cpp//src/kj",
+    ],
+)
+
+wd_cc_library(
+    name = "deferred-proxy",
+    hdrs = ["deferred-proxy.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@capnp-cpp//src/kj",
+        "@capnp-cpp//src/kj:kj-async",
+    ],
+)
+
+wd_capnp_library(src = "r2-api.capnp")
+
+wd_capnp_library(src = "analytics-engine.capnp")
+
+wd_cc_library(
+    name = "url",
+    srcs = ["url.c++"],
+    hdrs = ["url.h"],
+    implementation_deps = [":util"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/io:compatibility-date_capnp",
+        "//src/workerd/jsg",
+        "@capnp-cpp//src/kj",
+    ],
+)
+
+wd_cc_library(
+    name = "urlpattern",
+    srcs = ["urlpattern.c++"],
+    hdrs = ["urlpattern.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":url",
+        "//src/workerd/jsg",
+        "//src/workerd/util:own-util",
+        "@capnp-cpp//src/kj",
+    ],
+)
+
+wd_cc_library(
+    name = "urlpattern-standard",
+    srcs = ["urlpattern-standard.c++"],
+    hdrs = ["urlpattern-standard.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/workerd/jsg",
+        "@ada-url",
+        "@capnp-cpp//src/kj",
+    ],
+)
+
+####################################################################################################
+## Tests
+
+[
+    kj_test(
+        src = f,
+        deps = [
+            "//src/workerd/io",
+            "//src/workerd/io:promise-wrapper",
+        ],
+    )
+    for f in [
+        "actor-state-test.c++",
+        "basics-test.c++",
+        "crypto/aes-test.c++",
+        "crypto/impl-test.c++",
+    ]
+]
+
+[
+    kj_test(
+        src = f,
+        deps = [
+            "//src/workerd/io",
+            "//src/workerd/io:promise-wrapper",
+            "//src/workerd/tests:test-fixture",
+        ],
+    )
+    for f in [
+        "streams/queue-test.c++",
+        "streams/standard-test.c++",
+    ]
+]
+
+kj_test(
+    src = "data-url-test.c++",
+    deps = [
+        ":data-url",
+        "//src/workerd/io",
+    ],
+)
+
+kj_test(
+    src = "util-test.c++",
+    deps = [
+        ":util",
+    ],
+)
+
+kj_test(
+    src = "deferred-proxy-test.c++",
+    deps = [
+        ":deferred-proxy",
+    ],
+)
+
+kj_test(
+    src = "streams/internal-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+kj_test(
+    src = "streams-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+kj_test(
+    src = "system-streams-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+kj_test(
+    src = "actor-state-iocontext-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+kj_test(
+    src = "sockets-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/io:worker-interface",
+        "//src/workerd/tests:test-fixture",
+        "//src/workerd/util:autogate",
+    ],
+)
+
+kj_test(
+    src = "api-rtti-test.c++",
+    deps = [
+        ":encoding",
+        ":html-rewriter",
+        ":streams",
+        ":urlpattern",
+        ":urlpattern-standard",
+        "//src/workerd/io",
+        "//src/workerd/jsg:rtti",
+    ],
+)
+
+kj_test(
+    src = "encoding-test.c++",
+    deps = [
+        ":encoding",
+        "//src/workerd/io",
+    ],
+)
+
+kj_test(
+    src = "base64-test.c++",
+    deps = ["//src/workerd/tests:test-fixture"],
+)
+
+kj_test(
+    src = "ser-errors-test.c++",
+    deps = [
+        "//src/workerd/jsg",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+kj_test(
+    src = "cf-property-test.c++",
+    deps = ["//src/workerd/tests:test-fixture"],
+)
+
+kj_test(
+    src = "streams/writable-sink-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/jsg",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+kj_test(
+    src = "streams/readable-source-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/jsg",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+kj_test(
+    src = "streams/writable-sink-adapter-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/jsg",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+kj_test(
+    src = "streams/readable-source-adapter-test.c++",
+    deps = [
+        "//src/workerd/io",
+        "//src/workerd/jsg",
+        "//src/workerd/tests:test-fixture",
+    ],
+)
+
+wd_test(
+    src = "streams/identitytransformstream-backpressure-test.wd-test",
+    args = ["--experimental"],
+    data = ["streams/identitytransformstream-backpressure-test.js"],
+)
+
+wd_test(
+    src = "streams/identitytransformstream-byob-test.wd-test",
+    args = ["--experimental"],
+    data = ["streams/identitytransformstream-byob-test.js"],
+)
+
+wd_test(
+    src = "streams/streams-test.wd-test",
+    args = ["--experimental"],
+    data = ["streams/streams-test.js"],
+)

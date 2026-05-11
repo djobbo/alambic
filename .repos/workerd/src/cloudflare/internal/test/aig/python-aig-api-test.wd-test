@@ -1,0 +1,34 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "aig-api-test",
+      worker = (
+        modules = [
+          (name = "worker.py", pythonModule = embed "aig-api-test.py")
+        ],
+        compatibilityFlags = ["nodejs_compat", %PYTHON_FEATURE_FLAGS, "disable_python_no_global_handlers"],
+        bindings = [
+        (
+          name = "ai",
+          wrapped = (
+            moduleName = "cloudflare-internal:ai-api",
+            innerBindings = [(
+              name = "fetcher",
+              service = "aig-mock"
+            )],
+          )
+        )
+        ],
+      )
+    ),
+    ( name = "aig-mock",
+      worker = (
+        compatibilityFlags = ["experimental", "nodejs_compat"],
+        modules = [
+          (name = "worker", esModule = embed "aig-mock.js")
+        ],
+      )
+    )
+  ]
+);

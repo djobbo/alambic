@@ -1,0 +1,72 @@
+#include "spkac.h"
+
+#include "impl.h"
+
+#include <workerd/io/io-context.h>
+#include <workerd/jsg/jsg.h>
+
+#include <ncrypto.h>
+
+namespace workerd::api {
+
+bool verifySpkac(kj::ArrayPtr<const kj::byte> input) {
+  // So, this is fun. SPKAC uses MD5 as the digest algorithm. This is a problem because
+  // using MD5 for signature verification is not allowed in FIPS mode, which means that
+  // although we have a working implementation here, the result of this call is always
+  // going to be false even if the input signature is correct. So this is a bit of a dead
+  // end that isn't going to be super useful. Fortunately tho the exportPublicKey and
+  // exportChallenge functions both work correctly and are useful. Unfortunately, this
+  // likely means users would need to implement their own verification, which sucks.
+  //
+  // Alternatively we could choose to implement our own version of the validation that
+  // bypasses BoringSSL's FIPS configuration. For now tho, this does end up matching
+  // Node.js' behavior when FIPS is enabled so I guess that's something.
+  KJ_IF_SOME(ioContext, IoContext::tryCurrent()) {
+    ioContext.logWarningOnce(
+        "The verifySpkac function is currently of limited value in workers because "
+        "the SPKAC signature verification uses MD5, which is not supported in FIPS mode. "
+        "All workers run in FIPS mode. Accordingly, this method will currently always "
+        "return false even if the SPKAC signature is valid. This is a known limitation.");
+  }
+
+  // Works around a bug in ncrypto...
+  auto pos = std::string_view(input.asChars().begin(), input.size()).find_last_not_of(" \n\r\t");
+  if (pos == std::string_view::npos) {
+    return false;
+  }
+
+  return ncrypto::VerifySpkac(ToNcryptoBuffer(input.asChars()));
+}
+
+kj::Maybe<jsg::JsUint8Array> exportPublicKey(jsg::Lock& js, kj::ArrayPtr<const kj::byte> input) {
+  // Works around a bug in ncrypto...
+  auto pos = std::string_view(input.asChars().begin(), input.size()).find_last_not_of(" \n\r\t");
+  if (pos == std::string_view::npos) {
+    return kj::none;
+  }
+
+  if (auto bio = ncrypto::ExportPublicKey(ToNcryptoBuffer(input.asChars()))) {
+    BUF_MEM* bptr = bio;
+    auto buf = jsg::JsUint8Array::create(js, bptr->length);
+    auto aptr = kj::arrayPtr(bptr->data, bptr->length);
+    buf.asArrayPtr<char>().copyFrom(aptr);
+    return buf;
+  }
+  return kj::none;
+}
+
+kj::Maybe<jsg::JsUint8Array> exportChallenge(jsg::Lock& js, kj::ArrayPtr<const kj::byte> input) {
+
+  // Works around a bug in ncrypto...
+  auto pos = std::string_view(input.asChars().begin(), input.size()).find_last_not_of(" \n\r\t");
+  if (pos == std::string_view::npos) {
+    return kj::none;
+  }
+
+  if (auto dp = ncrypto::ExportChallenge(ToNcryptoBuffer(input.asChars()))) {
+    auto src = kj::arrayPtr(dp.get<kj::byte>(), dp.size());
+    return jsg::JsUint8Array::create(js, src);
+  }
+  return kj::none;
+}
+}  // namespace workerd::api

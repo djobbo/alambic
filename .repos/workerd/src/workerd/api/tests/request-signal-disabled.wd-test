@@ -1,0 +1,20 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "request-signal-disabled",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "request-signal-disabled.js" )
+        ],
+        compatibilityFlags = ["nodejs_compat", "disable_request_signal", "experimental"],
+        bindings = [
+          (name = "OtherServer", service = (name = "request-signal-disabled", entrypoint = "OtherServer")),
+          (name = "Server", service = (name = "request-signal-disabled", entrypoint = "Server")),
+          (name = "defaultExport", service = "request-signal-disabled"),
+        ]
+      )
+    )
+  ]
+);
+

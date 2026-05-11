@@ -1,0 +1,11 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "lolhtml",
+    hdrs = ["@crates_vendor//:lol_html_c_api_include_lol_html_h"],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates_vendor//:lol_html_c_api",
+    ],
+)

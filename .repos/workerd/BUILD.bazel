@@ -1,0 +1,147 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@aspect_rules_js//npm:defs.bzl", "npm_link_package")
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@npm//:capnp-es/package_json.bzl", capnp_es_bins = "bin")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("//:build/wd_cc_embed.bzl", "wd_cc_embed")
+
+# This is used to embed the ICU data file which libicu needs at runtime to do its thing.
+# We bake this file into the binary to avoid shipping it separately. (V8's normal GN build can
+# actually do this for us, but we use the Bazel build which doesn't have this option.) Using #embed
+# makes this very fast and convenient.
+wd_cc_embed(
+    name = "icudata-embed",
+    src = "@com_googlesource_chromium_icu//:common/icudtl.dat",
+    base_name = "icu-data-file",
+    strip_include_prefix = "",
+    visibility = ["//visibility:public"],
+)
+
+# Also re-export the v8 ICU library for @workerd-v8
+alias(
+    name = "v8_icu",
+    actual = "@v8//:v8_icu",
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+npm_link_all_packages(name = "node_modules")
+
+npm_link_package(
+    name = "node_modules/@workerd/jsg",
+    src = "//src/workerd/jsg:jsg_js",
+    package = "@workerd/jsg",
+)
+
+# Plugin to generate .js files
+capnp_es_bins.capnpc_js_binary(
+    name = "capnpc_js_plugin",
+    visibility = ["//visibility:public"],
+)
+
+# Plugin to generate .ts files
+capnp_es_bins.capnpc_ts_binary(
+    name = "capnpc_ts_plugin",
+    visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "prettierrc",
+    srcs = [":.prettierrc.json"],
+    visibility = ["//build/deps/formatters:__pkg__"],
+)
+
+# Platform definition for using clang-cl on Windows
+platform(
+    name = "x64_windows-clang-cl",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+        "@bazel_tools//tools/cpp:clang-cl",
+    ],
+)
+
+# Used for cross-compilation
+platform(
+    name = "macOS_x86",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+# Detect whether we use Linux/macOS/either, used to configure whether tcmalloc/perfetto should be
+# used.
+config_setting(
+    name = "is_linux",
+    constraint_values = ["@platforms//os:linux"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "is_macos",
+    constraint_values = ["@platforms//os:macos"],
+    visibility = ["//visibility:public"],
+)
+
+selects.config_setting_group(
+    name = "is_unix",
+    match_any = [
+        ":is_linux",
+        ":is_macos",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# bazel enables the --ffunction-sections, --gc-sections flags used to remove dead code by default
+# on Linux opt builds. Enable the equivalent macOS flag -Wl,-dead_strip here to work around bazel
+# idiosyncrasies.
+# Note that the flag is defined for all non-debug builds of kj_test() and wd_cc_binary() on mac as
+# it surprisingly appears to be faster, perhaps because the linker generates and writes binaries
+# with much fewer symbols. This also helps reduce local and CI disk usage. If needed, dead code
+# stripping can be limited to optimized builds.
+config_setting(
+    name = "fast_build",
+    values = {"compilation_mode": "fastbuild"},
+)
+
+config_setting(
+    name = "opt_build",
+    values = {"compilation_mode": "opt"},
+)
+
+bool_flag(
+    name = "dead_strip",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "set_dead_strip",
+    flag_values = {"dead_strip": "True"},
+)
+
+# Workaround for bazel not supporting negated conditions (https://github.com/bazelbuild/bazel-skylib/issues/272)
+selects.config_setting_group(
+    name = "not_dbg_build",
+    match_any = [
+        ":fast_build",
+        ":opt_build",
+    ],
+)
+
+selects.config_setting_group(
+    name = "use_dead_strip",
+    match_all = [
+        "@platforms//os:macos",
+        ":set_dead_strip",
+        ":not_dbg_build",
+    ],
+)
+
+# Clang-tidy config to use
+label_flag(
+    name = "clang_tidy_config",
+    build_setting_default = ":.clang-tidy",
+    visibility = ["//visibility:public"],
+)

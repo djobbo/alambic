@@ -1,0 +1,38 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "workflows-api-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "workflows-api-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat"],
+        bindings = [
+        (
+          name = "workflow",
+          wrapped = (
+            moduleName = "cloudflare-internal:workflows-api",
+            innerBindings = [(
+              name = "fetcher",
+              service = "workflows-mock"
+            )],
+          )
+        ),
+        (
+          name = "mock",
+          service = "workflows-mock"
+        )
+        ],
+      )
+    ),
+    ( name = "workflows-mock",
+      worker = (
+        compatibilityFlags = ["nodejs_compat"],
+        modules = [
+          (name = "worker", esModule = embed "workflows-mock.js")
+        ],
+      )
+    )
+  ]
+);

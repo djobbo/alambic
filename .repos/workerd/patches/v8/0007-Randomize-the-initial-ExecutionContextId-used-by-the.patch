@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Orion Hodson <orion@cloudflare.com>
+Date: Wed, 13 Sep 2023 15:38:15 +0100
+Subject: Randomize the initial ExecutionContextId used by the inspector
+
+This is to help the devtools sources panel when workerd is re-started
+by miniflare. This happens because workerd does not support re-loading
+live workers (https://chat.google.com/room/AAAAnS2bXT4/GX5-pa8O0ts).
+
+Signed-off-by: James M Snell <jsnell@cloudflare.com>
+
+diff --git a/src/inspector/v8-inspector-impl.cc b/src/inspector/v8-inspector-impl.cc
+index b57097472e2d55128a3b116c6c613a3cefccfe56..d1d3f312234a11776d98c67a874ef0c62c324a56 100644
+--- a/src/inspector/v8-inspector-impl.cc
++++ b/src/inspector/v8-inspector-impl.cc
+@@ -68,7 +68,7 @@ V8InspectorImpl::V8InspectorImpl(v8::Isolate* isolate,
+       m_client(client),
+       m_debugger(new V8Debugger(isolate, this)),
+       m_lastExceptionId(0),
+-      m_lastContextId(0) {
++      m_lastContextId(static_cast<int32_t>(generateUniqueId() & 0x1fff'ffe0)) {
+   v8::debug::SetInspector(m_isolate, this);
+   v8::debug::SetConsoleDelegate(m_isolate, console());
+   v8::debug::SetIsolateId(m_isolate, generateUniqueId());

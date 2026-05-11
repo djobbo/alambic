@@ -1,0 +1,19 @@
+load("@workerd//:build/wd_ts_bundle.bzl", "wd_ts_bundle")
+
+wd_ts_bundle(
+    name = "cloudflare",
+    eslintrc_json = "eslint.config.mjs",
+    import_name = "cloudflare",
+    internal_modules = glob(
+        [
+            "internal/*.ts",
+        ],
+    ),
+    modules = glob(
+        [
+            "*.ts",
+        ],
+    ),
+    schema_id = "0xbcc8f57c63814006",
+    tsconfig_json = "tsconfig.json",
+)

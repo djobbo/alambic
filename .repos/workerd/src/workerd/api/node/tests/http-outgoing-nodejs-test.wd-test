@@ -1,0 +1,22 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "http-outgoing-nodejs-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "http-outgoing-nodejs-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat", "nodejs_compat_v2", "experimental", "enable_nodejs_http_modules", "enable_nodejs_http_server_modules", "streams_enable_constructors"],
+        bindings = [
+          (name = "SIDECAR_HOSTNAME", fromEnvironment = "SIDECAR_HOSTNAME"),
+          (name = "FINISH_WRITABLE_PORT", fromEnvironment = "FINISH_WRITABLE_PORT"),
+          (name = "WRITABLE_FINISHED_PORT", fromEnvironment = "WRITABLE_FINISHED_PORT"),
+          (name = "PROPERTIES_PORT", fromEnvironment = "PROPERTIES_PORT"),
+          (name = "SERVICE", service = "http-outgoing-nodejs-test"),
+        ],
+      )
+    ),
+    ( name = "internet", network = ( allow = ["private"] ) ),
+  ],
+);

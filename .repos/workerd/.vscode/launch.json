@@ -1,0 +1,309 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "workerd (dbg)",
+      "preLaunchTask": "Bazel build workerd (dbg)",
+      "request": "launch",
+      "type": "cppdbg",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/bazel-bin/src/workerd/server/workerd",
+      "linux": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-d ${workspaceFolder}"
+      },
+      "osx": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "lldb",
+        "sourceFileMap": {
+          "src": "${workspaceFolder}/src",
+          "bazel-bin": "${workspaceFolder}/bazel-bin",
+          "bazel-out": "${workspaceFolder}/bazel-out",
+          "external": "${workspaceFolder}/external"
+        }
+      },
+      "windows": {
+        "type": "cppvsdbg",
+        "request": "launch"
+      },
+      "args": ["serve", "${input:workerdConfig}"],
+      "stopAtEntry": false,
+      "externalConsole": false
+    },
+    {
+      "name": "workerd (opt)",
+      "preLaunchTask": "Bazel build workerd (opt)",
+      "request": "launch",
+      "type": "cppdbg",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/bazel-bin/src/workerd/server/workerd",
+      "linux": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-d ${workspaceFolder}"
+      },
+      "osx": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "lldb",
+        "sourceFileMap": {
+          "src": "${workspaceFolder}/src",
+          "bazel-bin": "${workspaceFolder}/bazel-bin",
+          "bazel-out": "${workspaceFolder}/bazel-out",
+          "external": "${workspaceFolder}/external"
+        }
+      },
+      "windows": {
+        "type": "cppvsdbg",
+        "request": "launch"
+      },
+      "args": ["serve", "${input:workerdConfig}"],
+      "stopAtEntry": false,
+      "externalConsole": false
+    },
+    {
+      "name": "workerd with inspector enabled (dbg)",
+      "preLaunchTask": "Bazel build workerd (dbg)",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/bazel-bin/src/workerd/server/workerd",
+      "linux": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-d ${workspaceFolder}"
+      },
+      "osx": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "lldb",
+        "sourceFileMap": {
+          "src": "${workspaceFolder}/src",
+          "bazel-bin": "${workspaceFolder}/bazel-bin",
+          "bazel-out": "${workspaceFolder}/bazel-out",
+          "external": "${workspaceFolder}/external"
+        }
+      },
+      "windows": {
+        "type": "cppvsdbg",
+        "request": "launch"
+      },
+      "args": ["serve", "-i0.0.0.0", "--verbose", "${input:workerdConfig}"],
+      "stopAtEntry": false,
+      "externalConsole": false
+    },
+    {
+      "name": "workerd with inspector enabled (opt)",
+      "preLaunchTask": "Bazel build workerd (opt)",
+      "type": "cppdbg",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/bazel-bin/src/workerd/server/workerd",
+      "linux": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-d ${workspaceFolder}"
+      },
+      "osx": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "lldb",
+        "sourceFileMap": {
+          "src": "${workspaceFolder}/src",
+          "bazel-bin": "${workspaceFolder}/bazel-bin",
+          "bazel-out": "${workspaceFolder}/bazel-out",
+          "external": "${workspaceFolder}/external"
+        }
+      },
+      "windows": {
+        "type": "cppvsdbg",
+        "request": "launch"
+      },
+      "args": ["serve", "-i0.0.0.0", "--verbose", "${input:workerdConfig}"],
+      "stopAtEntry": false,
+      "externalConsole": false
+    },
+    {
+      "name": "workerd test case (dbg)",
+      "preLaunchTask": "Bazel build all (dbg)",
+      "program": "${workspaceFolder}/${input:testToDebug}",
+      "cwd": "${workspaceFolder}",
+      "type": "cppdbg",
+      "request": "launch",
+      "linux": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-d ${workspaceFolder}",
+        "program": "${workspaceFolder}/${input:testToDebug}"
+      },
+      "osx": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "lldb",
+        "targetArchitecture": "arm64",
+        "sourceFileMap": {
+          "src": "${workspaceFolder}/src",
+          "bazel-bin": "${workspaceFolder}/bazel-bin",
+          "bazel-out": "${workspaceFolder}/bazel-out",
+          "external": "${workspaceFolder}/external"
+        },
+        "program": "${workspaceFolder}/${input:testToDebug}"
+      },
+      "windows": {
+        "type": "cppvsdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/${input:testToDebug}"
+      },
+      "stopAtEntry": false,
+      "externalConsole": false
+    },
+    {
+      "name": "workerd wd-test case (dbg)",
+      "preLaunchTask": "Prepare workerd wd-test (dbg)",
+      "program": "${workspaceFolder}/bazel-bin/src/workerd/server/workerd",
+      "args": [
+        "test",
+        "${input:wdtestToDebug}",
+        "--experimental",
+        "--directory-path",
+        "TEST_TMPDIR=${workspaceFolder}/bazel-out/test_tmpdir"
+      ],
+      "cwd": "${workspaceFolder}",
+      "type": "cppdbg",
+      "request": "launch",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "linux": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-d ${workspaceFolder}"
+      },
+      "osx": {
+        "type": "cppdbg",
+        "request": "launch",
+        "MIMode": "lldb",
+        "targetArchitecture": "arm64",
+        "sourceFileMap": {
+          "src": "${workspaceFolder}/src",
+          "bazel-bin": "${workspaceFolder}/bazel-bin",
+          "bazel-out": "${workspaceFolder}/bazel-out",
+          "external": "${workspaceFolder}/external"
+        }
+      },
+      "windows": {
+        "type": "cppvsdbg",
+        "request": "launch"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "workerdConfig",
+      "description": "Workerd configuration to serve",
+      "default": "${workspaceFolder}/samples/helloworld/config.capnp",
+      "type": "promptString"
+    },
+    {
+      "id": "testToDebug",
+      "description": "Test to debug",
+      "type": "pickString",
+      "default": "bazel-bin/src/workerd/jsg/jsg-test",
+      "options": [
+        "bazel-bin/src/workerd/util/sqlite-test",
+        "bazel-bin/src/workerd/util/wait-list-test",
+        "bazel-bin/src/workerd/util/batch-queue-test",
+        "bazel-bin/src/workerd/util/sqlite-kv-test",
+        "bazel-bin/src/workerd/io/io-gate-test",
+        "bazel-bin/src/workerd/io/compatibility-date-test",
+        "bazel-bin/src/workerd/io/promise-wrapper-test",
+        "bazel-bin/src/workerd/io/actor-cache-test",
+        "bazel-bin/src/workerd/tests/test-fixture-test",
+        "bazel-bin/src/workerd/jsg/promise-test",
+        "bazel-bin/src/workerd/jsg/resource-test",
+        "bazel-bin/src/workerd/jsg/string-test",
+        "bazel-bin/src/workerd/jsg/tracing-test",
+        "bazel-bin/src/workerd/jsg/web-idl-test",
+        "bazel-bin/src/workerd/jsg/util-test",
+        "bazel-bin/src/workerd/jsg/dom-exception-test",
+        "bazel-bin/src/workerd/jsg/type-wrapper-test",
+        "bazel-bin/src/workerd/jsg/macro-meta-test",
+        "bazel-bin/src/workerd/jsg/rtti-test",
+        "bazel-bin/src/workerd/jsg/value-test",
+        "bazel-bin/src/workerd/jsg/setup-test",
+        "bazel-bin/src/workerd/jsg/function-test",
+        "bazel-bin/src/workerd/jsg/buffersource-test",
+        "bazel-bin/src/workerd/jsg/struct-test",
+        "bazel-bin/src/workerd/jsg/jsg-test",
+        "bazel-bin/src/workerd/jsg/url-test",
+        "bazel-bin/src/workerd/jsg/iterator-test",
+        "bazel-bin/src/workerd/server/server-test",
+        "bazel-bin/src/workerd/api/actor-state-test",
+        "bazel-bin/src/workerd/api/basics-test",
+        "bazel-bin/src/workerd/api/streams/queue-test",
+        "bazel-bin/src/workerd/api/crypto-impl-aes-test",
+        "bazel-bin/src/workerd/api/crypto-impl-test",
+        "bazel-bin/src/workerd/api/util-test",
+        "bazel-bin/src/workerd/api/api-rtti-test",
+        "bazel-bin/src/workerd/api/node/buffer-test",
+        "bazel-bin/src/workerd/api/crypto-impl-asymmetric-test",
+        "bazel-bin/src/workerd/api/url-standard-test"
+      ]
+    },
+    {
+      "id": "wdtestToDebug",
+      "description": "Workerd Driven Test to debug",
+      "type": "pickString",
+      "default": "src/workerd/api/node/path-test.wd-test",
+      "options": [
+        "src/cloudflare/internal/test/d1/d1-api-test.wd-test",
+        "src/cloudflare/internal/test/vectorize/vectorize-api-test.wd-test",
+        "src/cloudflare/internal/test/pipeline-transform/pipeline-transform.wd-test",
+        "src/workerd/api/actor-alarms-delete-test.wd-test",
+        "src/workerd/api/actor-alarms-test.wd-test",
+        "src/workerd/api/analytics-engine-test.wd-test",
+        "src/workerd/api/crypto-impl-asymmetric-test.wd-test",
+        "src/workerd/api/http-test.wd-test",
+        "src/workerd/api/node/assert-test.wd-test",
+        "src/workerd/api/node/buffer-nodejs-test.wd-test",
+        "src/workerd/api/node/crypto_dh-test.wd-test",
+        "src/workerd/api/node/crypto_hash-test.wd-test",
+        "src/workerd/api/node/crypto_hkdf-test.wd-test",
+        "src/workerd/api/node/crypto_hmac-test.wd-test",
+        "src/workerd/api/node/crypto_keys-test.wd-test",
+        "src/workerd/api/node/crypto_pbkdf2-test.wd-test",
+        "src/workerd/api/node/crypto_random-test.wd-test",
+        "src/workerd/api/node/diagnostics-channel-test.wd-test",
+        "src/workerd/api/node/mimetype-test.wd-test",
+        "src/workerd/api/node/path-test.wd-test",
+        "src/workerd/api/node/streams-test.wd-test",
+        "src/workerd/api/node/string-decoder-test.wd-test",
+        "src/workerd/api/kv-test.wd-test",
+        "src/workerd/api/queue-test.wd-test",
+        "src/workerd/api/rtti-test.wd-test",
+        "src/workerd/api/sql-test.wd-test",
+        "src/workerd/api/streams/identitytransformstream-backpressure-test.wd-test",
+        "src/workerd/api/streams/streams-test.wd-test",
+        "src/workerd/api/tests/abortable-fetch-test.wd-test",
+        "src/workerd/api/tests/abortsignal-test.wd-test",
+        "src/workerd/api/tests/blob-test.wd-test",
+        "src/workerd/api/tests/encoding-test.wd-test",
+        "src/workerd/api/tests/events-test.wd-test",
+        "src/workerd/api/tests/scheduler-test.wd-test",
+        "src/workerd/api/urlpattern-test.wd-test",
+        "src/workerd/server/tests/extensions/extensions-test.wd-test",
+        "src/workerd/tests/performance-test.wd-test"
+      ]
+    }
+  ]
+}

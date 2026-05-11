@@ -1,0 +1,21 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "cross-context-promise-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "cross-context-promise-test.js")
+        ],
+        compatibilityFlags = [
+          "nodejs_compat_v2",
+          "handle_cross_request_promise_resolution",
+          "streams_enable_constructors",
+        ],
+        bindings = [
+          (name = "subrequest", service = "cross-context-promise-test")
+        ]
+      )
+    ),
+  ],
+);

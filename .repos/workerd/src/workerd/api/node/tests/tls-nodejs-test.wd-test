@@ -1,0 +1,30 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "tls-nodejs-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "tls-nodejs-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat", "nodejs_compat_v2", "streams_enable_constructors", "add_nodejs_compat_eol_v24"],
+        bindings = [
+          (name = "ECHO_SERVER_PORT", fromEnvironment = "ECHO_SERVER_PORT"),
+          (name = "HELLO_SERVER_PORT", fromEnvironment = "HELLO_SERVER_PORT"),
+          (name = "JS_STREAM_SERVER_PORT", fromEnvironment = "JS_STREAM_SERVER_PORT"),
+          (name = "STREAM_WRAP_SERVER_PORT", fromEnvironment = "STREAM_WRAP_SERVER_PORT"),
+        ]
+      ),
+    ),
+    ( name = "internet",
+      network = (
+        allow = ["private"],
+        tlsOptions = (
+          trustedCertificates = [
+            embed "fixtures/tls-nodejs-tcp-server.pem",
+          ],
+        ),
+      ),
+    ),
+  ],
+);

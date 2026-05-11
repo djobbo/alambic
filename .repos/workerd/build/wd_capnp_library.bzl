@@ -1,0 +1,43 @@
+load("//:build/wd_cc_capnp_library.bzl", "wd_cc_capnp_library")
+load("//:build/wd_rust_capnp_library.bzl", "wd_rust_capnp_library")
+
+def wd_capnp_library(
+        src,
+        deps = [],
+        tags = [],
+        visibility = ["//visibility:public"]):
+    """Generates capnp library for multiple languages.
+
+    For a given file-name.capnp it will produce:
+    - `file-name_capnp` c++ library
+    - `file-name_capnp_rust` rust library
+    """
+    base_name = src.removesuffix(".capnp")
+    target_compatible_with = select({
+        "@//build/config:no_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    })
+
+    # json.capnp is available implicitly for c++ targets
+    cc_deps = [dep for dep in deps if dep != "@capnp-cpp//src/capnp/compat:json_capnp"]
+
+    wd_cc_capnp_library(
+        name = base_name + "_capnp",
+        visibility = visibility,
+        deps = cc_deps,
+        srcs = [src],
+        tags = ["manual"] + tags,
+        target_compatible_with = target_compatible_with,
+    )
+
+    rust_deps = [dep + "_rust" if dep.endswith("_capnp") else dep for dep in deps]
+
+    wd_rust_capnp_library(
+        name = base_name + "_capnp_rust",
+        crate_name = base_name.replace("-", "_") + "_capnp",
+        visibility = visibility,
+        deps = rust_deps,
+        srcs = [src],
+        tags = ["manual"] + tags,
+        target_compatible_with = target_compatible_with,
+    )

@@ -1,0 +1,14 @@
+using Workerd = import "/workerd/workerd.capnp";
+
+const unitTests :Workerd.Config = (
+  services = [
+    ( name = "encoding-test",
+      worker = (
+        modules = [
+          (name = "worker", esModule = embed "encoding-test.js")
+        ],
+        compatibilityFlags = ["nodejs_compat", "text_decoder_cjk_decoder"]
+      )
+    ),
+  ],
+);

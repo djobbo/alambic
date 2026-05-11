@@ -1,0 +1,143 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Felix Hanau <felix@cloudflare.com>
+Date: Wed, 7 Jun 2023 21:40:54 -0400
+Subject: Speed up V8 bazel build by always using target cfg
+
+See the workerd build cfg changes for rationale. This provides a significant
+speedup for the build: Components like ICU were previously compiled in
+both target and exec configurations as generator tools depend on them.
+
+Signed-off-by: James M Snell <jsnell@cloudflare.com>
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+index f79d7f3e434a126daa41b8effd6e98f0d487e773..1ab690b670cbb9c717fe1f368f0e073e85830d4a 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -19,6 +19,7 @@ load(
+     "v8_mksnapshot",
+     "v8_string",
+     "v8_torque_files",
++    "genrule_target",
+ )
+ load(":bazel/v8-non-pointer-compression.bzl", "v8_binary_non_pointer_compression")
+ 
+@@ -4504,22 +4505,20 @@ filegroup(
+     ],
+ )
+ 
+-genrule(
++genrule_target(
+     name = "generated_bytecode_builtins_list",
+     srcs = [],
+     outs = ["builtins-generated/bytecodes-builtins-list.h"],
+-    cmd = "$(location :bytecode_builtins_list_generator) $@",
+-    cmd_bat = "$(location :bytecode_builtins_list_generator) $@",
+-    tools = [":bytecode_builtins_list_generator"],
++    args = ["$(location :builtins-generated/bytecodes-builtins-list.h)"],
++    tool = ":bytecode_builtins_list_generator",
+ )
+ 
+-genrule(
++genrule_target(
+     name = "generated_regexp_special_case",
+     srcs = [],
+     outs = ["src/regexp/special-case.cc"],
+-    cmd = "$(location :regexp_special_case_generator) $@",
+-    cmd_bat = "$(location :regexp_special_case_generator) $@",
+-    tools = [":regexp_special_case_generator"],
++    args = ["$(location :src/regexp/special-case.cc)"],
++    tool = ":regexp_special_case_generator",
+ )
+ 
+ v8_mksnapshot(
+@@ -4740,7 +4739,6 @@ v8_binary(
+     srcs = [
+         "src/regexp/gen-regexp-special-case.cc",
+         "src/regexp/special-case.h",
+-        ":v8_shared_internal_headers",
+     ],
+     copts = ["-Wno-implicit-fallthrough"],
+     defines = [
+diff --git a/bazel/defs.bzl b/bazel/defs.bzl
+index 233985667e85b6c06ccfafd94a659879526603e9..7dcf0f8646b73d860e247e51f72da71924227d56 100644
+--- a/bazel/defs.bzl
++++ b/bazel/defs.bzl
+@@ -347,6 +347,15 @@ def v8_library(
+             **kwargs
+         )
+ 
++def get_cfg():
++    # Setting the configuration to "target" allows us to avoid compiling code used in both V8 and a
++    # generator tool twice. For cross-compilation this would need to be set to "exec" manually.
++    # Unfortunately bazel makes it very difficult to set the configuration at build time as macros
++    # are resolved before select() can be resolved based on the command line. This could
++    # alternatively be done by defining build targets and the rules used to declare them twice
++    # (once for exec and for target).
++    return "target"
++
+ # Use a single generator target for torque definitions and initializers. We can
+ # split the set of outputs by using OutputGroupInfo, that way we do not need to
+ # run the torque generator twice.
+@@ -415,7 +424,7 @@ _v8_torque_files = rule(
+         "tool": attr.label(
+             allow_files = True,
+             executable = True,
+-            cfg = "exec",
++            cfg = get_cfg(),
+         ),
+         "args": attr.string_list(),
+     },
+@@ -517,13 +526,16 @@ _v8_mksnapshot = rule(
+             mandatory = True,
+             allow_files = True,
+             executable = True,
+-            cfg = "exec",
++            cfg = get_cfg(),
+         ),
+         "target_os": attr.string(mandatory = True),
+         "prefix": attr.string(mandatory = True),
+         "suffix": attr.string(mandatory = True),
+     },
+-    cfg = v8_target_cpu_transition,
++    # This allows specifying a CPU architecture on the command line to be used when compiling
++    # mksnapshot. Disable this functionality as we do not use it and it makes cfg changes more
++    # difficult.
++    # cfg = v8_target_cpu_transition,
+ )
+ 
+ def v8_mksnapshot(name, args, suffix = ""):
+@@ -651,3 +663,34 @@ def v8_build_config(name, arch):
+         outs = ["icu/" + name + ".json"],
+         cmd = "echo '" + build_config_content(cpu, "true") + "' > \"$@\"",
+     )
++
++# Clone of genrule, but set up to compile for target configuration. Use with care, this may not
++# support all features of genrule(), but is sufficient for this use case.
++# Derived from the tensorflow project, see workerd build/run_binary_target.bzl for details.
++def _genrule_target_impl(ctx):
++    tool = ctx.attr.tool[DefaultInfo].files_to_run.executable
++    flags = [ ctx.expand_location(a) if "$(location" in a else a for a in ctx.attr.args ]
++
++    cmd = " ".join([tool.path] + flags)
++    ctx.actions.run_shell(
++        inputs = ctx.files.srcs,
++        outputs = ctx.outputs.outs,
++        tools = [tool],
++        use_default_shell_env = True,
++        command = cmd,
++    )
++
++genrule_target = rule(
++    implementation = _genrule_target_impl,
++    output_to_genfiles = True,
++    attrs = {
++        "outs": attr.output_list(mandatory = True),
++        "srcs": attr.label_list(allow_files = True),
++        "args": attr.string_list(),
++        "tool": attr.label(
++            executable = True,
++            cfg = get_cfg(),
++            mandatory = True
++        ),
++    },
++)

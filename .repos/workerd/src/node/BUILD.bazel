@@ -1,0 +1,27 @@
+load("@workerd//:build/wd_ts_bundle.bzl", "wd_ts_bundle")
+
+wd_ts_bundle(
+    name = "node",
+    eslintrc_json = "eslint.config.mjs",
+    gen_compile_cache = True,
+    import_name = "node",
+    internal_modules = glob([
+        "internal/*.ts",
+        "internal/*.js",
+    ]),
+    modules = glob([
+        "*.ts",
+        "assert/*.ts",
+        "dns/*.ts",
+        "fs/*.ts",
+        "inspector/*.ts",
+        "path/*.ts",
+        "readline/*.ts",
+        "stream/*.js",
+        "timers/*.ts",
+        "util/*.ts",
+    ]),
+    schema_id = "0xbcc8f57c63814005",
+    tsconfig_json = "tsconfig.json",
+    deps = ["//:node_modules/@types/node"],
+)
