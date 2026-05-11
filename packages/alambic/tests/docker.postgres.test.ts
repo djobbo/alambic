@@ -6,7 +6,7 @@ import {
   postgresEnvironment,
 } from "../src/Docker/Images/Postgres.ts";
 
-describe("Crucible.Docker.Postgres helpers", () => {
+describe("Alambic.Docker.Postgres helpers", () => {
   test("postgresEnvironment includes auth and optional keys", () => {
     const env = postgresEnvironment({
       POSTGRES_PASSWORD: "secret",

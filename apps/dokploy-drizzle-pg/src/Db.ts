@@ -1,5 +1,5 @@
-import * as Docker from "crucible/Docker";
-import * as Dokploy from "crucible/Dokploy";
+import * as Docker from "alambic/Docker";
+import * as Dokploy from "alambic/Dokploy";
 import * as Drizzle from "alchemy/Drizzle";
 import * as Effect from "effect/Effect";
 

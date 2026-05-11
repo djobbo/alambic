@@ -15,7 +15,7 @@ export interface EnvironmentProps {
 }
 
 export type Environment = Resource<
-  "Crucible.Dokploy.Environment",
+  "Alambic.Dokploy.Environment",
   EnvironmentProps,
   {
     environmentId: string;
@@ -27,7 +27,7 @@ export type Environment = Resource<
   Providers
 >;
 
-export const Environment = Resource<Environment>("Crucible.Dokploy.Environment");
+export const Environment = Resource<Environment>("Alambic.Dokploy.Environment");
 
 export const EnvironmentProvider = () =>
   Provider.effect(
@@ -72,7 +72,7 @@ export const EnvironmentProvider = () =>
       reconcile: Effect.fn(function* ({ id, news, output }) {
         if (!news || !isResolved(news)) {
           return yield* Effect.die(
-            new Error("Crucible.Dokploy.Environment: unresolved props at reconcile"),
+            new Error("Alambic.Dokploy.Environment: unresolved props at reconcile"),
           );
         }
         const dokploy = yield* Dokploy;
@@ -88,7 +88,7 @@ export const EnvironmentProvider = () =>
 
         if (Option.isNone(updated)) {
           return yield* Effect.die(
-            new Error("Crucible.Dokploy.Environment: failed to update environment"),
+            new Error("Alambic.Dokploy.Environment: failed to update environment"),
           );
         }
 

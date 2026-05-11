@@ -1,4 +1,4 @@
-import { DokployApi, Api } from "@crucible/dokploy-api";
+import { DokployApi, Api } from "@alambic/dokploy-api";
 import { Console, Effect } from "effect";
 import * as Context from "effect/Context";
 import * as Layer from "effect/Layer";
@@ -602,7 +602,7 @@ const deleteDomainHttp = (domainId: string) =>
     );
   });
 
-export class Dokploy extends Context.Service<Dokploy>()("Crucible.Dokploy.Provider", {
+export class Dokploy extends Context.Service<Dokploy>()("Alambic.Dokploy.Provider", {
   make: Effect.gen(function* () {
     const dokployApi = yield* DokployApi;
 

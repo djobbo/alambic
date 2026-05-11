@@ -1,4 +1,4 @@
-import { DokployApi, DokployConnection } from "@crucible/dokploy-api";
+import { DokployApi, DokployConnection } from "@alambic/dokploy-api";
 import * as Provider from "alchemy/Provider";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import * as Layer from "effect/Layer";
@@ -16,8 +16,8 @@ import { Dokploy } from "./Dokploy.ts";
 import { DokployEngineInMemoryLive } from "./DokployEngine.ts";
 import { Project, ProjectProvider } from "./Project.ts";
 
-/** Must not share {@link Dokploy}'s Context key (`Crucible.Dokploy`) or `yield* Dokploy` resolves to this registry instead of the HTTP client. */
-export class Providers extends Provider.ProviderCollection<Providers>()("Crucible.Dokploy") {}
+/** Must not share {@link Dokploy}'s Context key (`Alambic.Dokploy`) or `yield* Dokploy` resolves to this registry instead of the HTTP client. */
+export class Providers extends Provider.ProviderCollection<Providers>()("Alambic.Dokploy") {}
 
 export type ProviderRequirements = Layer.Services<ReturnType<typeof providers>>;
 

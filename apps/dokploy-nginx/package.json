@@ -4,15 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predeploy": "pnpm --dir ../../packages/crucible run build",
+    "predeploy": "pnpm --dir ../../packages/alambic run build",
     "stack:deploy": "alchemy deploy --yes",
     "stack:destroy": "alchemy destroy --yes",
     "diff": "alchemy deploy --dry-run"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
+    "alambic": "workspace:*",
     "alchemy": "catalog:",
-    "crucible": "workspace:*",
     "dotenv": "catalog:",
     "effect": "catalog:"
   },

@@ -7,7 +7,7 @@ import type { DockerComposeService } from "../Dokploy/dockerCompose.ts";
 import { normalizeComposeFingerprint } from "../Dokploy/dockerCompose.ts";
 import type { Providers } from "../Dokploy/Providers.ts";
 
-/** Image ref for a compose service — typically `yield*` `ImageTag()` from `crucible/Docker`. */
+/** Image ref for a compose service — typically `yield*` `ImageTag()` from `alambic/Docker`. */
 export type ComposeServiceImage = AlcInput.Input<{ readonly dockerImage: string }>;
 
 /**
@@ -58,14 +58,14 @@ const resolvedFingerprint = (services: ReadonlyArray<ComposeServiceResolved>): s
 
 /** Logical multi-service manifest; use with {@link Application.Compose}. */
 export type DockerCompose = Resource<
-  "Crucible.Docker.Compose",
+  "Alambic.Docker.Compose",
   ComposeProps,
   ComposeOutput,
   never,
   Providers
 >;
 
-export const DockerCompose = Resource<DockerCompose>("Crucible.Docker.Compose");
+export const DockerCompose = Resource<DockerCompose>("Alambic.Docker.Compose");
 
 export const ComposeProvider = () =>
   Provider.effect(
@@ -92,7 +92,7 @@ export const ComposeProvider = () =>
       reconcile: Effect.fn(function* ({ news }) {
         if (news === undefined || hasUnresolvedInputs(news)) {
           return yield* Effect.die(
-            new Error("Crucible.Docker.Compose: unresolved props at reconcile"),
+            new Error("Alambic.Docker.Compose: unresolved props at reconcile"),
           );
         }
         const n = news as ComposeProps;

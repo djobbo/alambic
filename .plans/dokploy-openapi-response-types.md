@@ -1,8 +1,8 @@
-# Dokploy OpenAPI: correct 200 response types for Crucible call sites
+# Dokploy OpenAPI: correct 200 response types for Alambic call sites
 
-Upstream Dokploy ships [`openapi.json`](.repos/dokploy/openapi.json) with many **`POST` `200` responses** whose body schema is an **empty object** (`properties: {}`, `additionalProperties: false`). That drives **`@effect/openapi-generator` → httpclient** to produce weak or useless return types for [`packages/dokploy-api/src/generated/DokployClient.ts`](packages/dokploy-api/src/generated/DokployClient.ts), while [`packages/crucible/src/Dokploy/DokployEngine.ts`](packages/crucible/src/Dokploy/DokployEngine.ts) already assumes richer JSON in several flows (e.g. parsing `applicationId` from create responses).
+Upstream Dokploy ships [`openapi.json`](.repos/dokploy/openapi.json) with many **`POST` `200` responses** whose body schema is an **empty object** (`properties: {}`, `additionalProperties: false`). That drives **`@effect/openapi-generator` → httpclient** to produce weak or useless return types for [`packages/dokploy-api/src/generated/DokployClient.ts`](packages/dokploy-api/src/generated/DokployClient.ts), while [`packages/alambic/src/Dokploy/DokployEngine.ts`](packages/alambic/src/Dokploy/DokployEngine.ts) already assumes richer JSON in several flows (e.g. parsing `applicationId` from create responses).
 
-This plan describes how to **extend [`openapi.codegen.patch.json`](packages/dokploy-api/openapi.codegen.patch.json)** with **[JSON Patch](https://datatracker.ietf.org/doc/html/rfc6902) `replace` (and occasionally `add`)** operations so **`200` `application/json` schemas** match what Dokploy actually returns, then **regenerate** the client and optionally tighten Crucible.
+This plan describes how to **extend [`openapi.codegen.patch.json`](packages/dokploy-api/openapi.codegen.patch.json)** with **[JSON Patch](https://datatracker.ietf.org/doc/html/rfc6902) `replace` (and occasionally `add`)** operations so **`200` `application/json` schemas** match what Dokploy actually returns, then **regenerate** the client and optionally tighten Alambic.
 
 ---
 
@@ -14,7 +14,7 @@ This plan describes how to **extend [`openapi.codegen.patch.json`](packages/dokp
 
 ---
 
-## Step 1 — Inventory operations Crucible actually calls
+## Step 1 — Inventory operations Alambic actually calls
 
 Every HTTP path used through **`DokployApi`** in `DokployEngine.ts` should be on the list to verify or fix. Current call sites (method names map to paths like `/application.create`, `/environment.update`, etc.):
 
@@ -37,7 +37,7 @@ Prefer **ground truth** in this order:
 
 1. **Dokploy server handlers** in [`.repos/dokploy`](.repos/dokploy) — search for the tRPC / route implementation that backs `application.create`, `environment.update`, etc., and see what it returns on success.
 2. **Integration probe** — one-off `curl` against a dev Dokploy instance with a valid API key (capture anonymized JSON). Useful when server code is indirect or wraps helpers.
-3. **Existing Crucible parsers** — [`extractApplicationId`](packages/crucible/src/Dokploy/DokployEngine.ts), `extractProjectId`, `extractEnvironmentId`, `extractDomainId`, and field readers encode **minimum** required fields; schemas should be **at least** as wide as those expectations (and ideally match the full object the API returns).
+3. **Existing Alambic parsers** — [`extractApplicationId`](packages/alambic/src/Dokploy/DokployEngine.ts), `extractProjectId`, `extractEnvironmentId`, `extractDomainId`, and field readers encode **minimum** required fields; schemas should be **at least** as wide as those expectations (and ideally match the full object the API returns).
 
 Document for each operation: required keys, optional keys, nested objects, arrays, and whether the body is sometimes **non-JSON** (then the spec should not claim JSON—rare for these routes).
 
@@ -66,7 +66,7 @@ Document for each operation: required keys, optional keys, nested objects, array
 
 - **Create/update routes** that return the created/updated entity — use a schema aligned with the list/get DTOs if those exist in `components/schemas`, or mirror the handler return type.
 - **`application.deploy` / `application.redeploy`** — if the server returns a status object, model it explicitly instead of `{}`.
-- **Routes where Crucible ignores the body** — you may still add a minimal accurate schema (e.g. `{ message: string }`) so generated types reflect reality; avoids `unknown`/`{}` confusion later.
+- **Routes where Alambic ignores the body** — you may still add a minimal accurate schema (e.g. `{ message: string }`) so generated types reflect reality; avoids `unknown`/`{}` confusion later.
 
 Apply patches only to **`200`** unless codegen also needs other status bodies typed.
 
@@ -82,11 +82,11 @@ From [`packages/dokploy-api`](packages/dokploy-api):
 **Checks:**
 
 - **`vp check`** and **`vp test`** at repo root (per [`AGENTS.md`](AGENTS.md)).
-- In Crucible, search for **`as never`** on Dokploy payloads/responses; after stronger types, **remove casts** where the generator now matches.
+- In Alambic, search for **`as never`** on Dokploy payloads/responses; after stronger types, **remove casts** where the generator now matches.
 
 ---
 
-## Step 5 — Crucible alignment
+## Step 5 — Alambic alignment
 
 - **`includeResponse: true`** tuples should gain **typed JSON** in the second element where schemas are precise—update **local helpers** (`responseBodyJsonUnknown`, extractors) only if you want stricter parsing.
 - **Bug triage:** `httpDeploy` and some delete paths reference **`sdk`** while other code uses **`api`** (`DokployApi` client). That is inconsistent with the surrounding `yield* DokployApi` pattern and will fail at runtime if `sdk` is not in scope. When touching those lines for types, **switch to the scoped client** (`const api = yield* DokployApi` / `api.applicationDeploy`) so behavior matches the rest of the engine.
@@ -104,4 +104,4 @@ From [`packages/dokploy-api`](packages/dokploy-api):
 
 - For **each** `DokployApi` operation used in `DokployEngine.ts`, either the **`200` JSON schema** in the patched spec reflects the real response, or there is a documented exception (e.g. endpoint returns empty body and codegen should use `void`).
 - **`vp run codegen`** produces an updated `DokployClient.ts` with **non-empty** return types where applicable.
-- Tests and typecheck pass; Crucible uses fewer unsafe casts where the new types suffice.
+- Tests and typecheck pass; Alambic uses fewer unsafe casts where the new types suffice.

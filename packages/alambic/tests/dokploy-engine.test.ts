@@ -6,7 +6,7 @@ import * as Option from "effect/Option";
 import * as Redacted from "effect/Redacted";
 
 import { DokployEngine, DokployEngineInMemoryLive } from "../src/Dokploy/DokployEngine.ts";
-import { DokployConnection } from "@crucible/dokploy-api";
+import { DokployConnection } from "@alambic/dokploy-api";
 
 /** Provides HTTP client + connection stubs so engine effects satisfy their declared requirements. */
 const dokployInMemoryTestLayer = Layer.mergeAll(

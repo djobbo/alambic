@@ -30,7 +30,7 @@ const testOptions = {
   >,
 };
 
-describe("Crucible.Dokploy.Application", () => {
+describe("Alambic.Dokploy.Application", () => {
   test("create project + env + app, update image, destroy", async () => {
     const scratch = Core.scratchStack(testOptions, "project env application lifecycle");
 
@@ -132,7 +132,7 @@ describe("Crucible.Dokploy.Application", () => {
   test("worker helper deploys via Application.Image", async () => {
     const scratch = Core.scratchStack(testOptions, "dokploy worker helper");
 
-    const tmpDir = await NodeFs.mkdtemp(NodePath.join(NodeOs.tmpdir(), "crucible-worker-"));
+    const tmpDir = await NodeFs.mkdtemp(NodePath.join(NodeOs.tmpdir(), "alambic-worker-"));
     const workerMain = NodePath.join(tmpDir, "worker.mjs");
     await NodeFs.writeFile(
       workerMain,

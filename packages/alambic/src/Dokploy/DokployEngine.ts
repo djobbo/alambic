@@ -1,4 +1,4 @@
-import { DokployApi } from "@crucible/dokploy-api";
+import { DokployApi } from "@alambic/dokploy-api";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -16,7 +16,7 @@ import {
   type DockerComposeService,
   type DockerComposeVolume,
 } from "./dockerCompose.ts";
-import { DokployConnection } from "@crucible/dokploy-api";
+import { DokployConnection } from "@alambic/dokploy-api";
 
 /** Resolved snapshot returned by {@link DokployEngineShape.findByApplicationId}. */
 export interface DokployApplicationSnapshot {
@@ -189,7 +189,7 @@ export interface DokployEngineShape {
   ) => Effect.Effect<void, DokployApiError | HttpClientError, DokployEngineRequirements>;
 }
 
-export const DokployEngine = Context.Service<DokployEngineShape>("@crucible/Dokploy/DokployEngine");
+export const DokployEngine = Context.Service<DokployEngineShape>("@alambic/Dokploy/DokployEngine");
 
 /** OpenAPI often types 2xx as `{}`; decode real JSON from the bundled `HttpClientResponse` (cached `text`). */
 const responseBodyJsonUnknown = (

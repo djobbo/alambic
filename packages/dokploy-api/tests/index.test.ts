@@ -5,7 +5,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { Error_BAD_REQUEST, make, normalizeDokployBaseUrl } from "../src/index.ts";
 
-describe("@crucible/dokploy-api", () => {
+describe("@alambic/dokploy-api", () => {
   test("decode BAD_REQUEST envelope (Exit smoke)", () => {
     const exit = Schema.decodeUnknownExit(Error_BAD_REQUEST)({
       message: "nope",

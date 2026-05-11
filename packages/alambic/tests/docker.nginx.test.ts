@@ -8,7 +8,7 @@ import {
   nginxUrl,
 } from "../src/Docker/Images/Nginx.ts";
 
-describe("Crucible.Docker.Nginx helpers", () => {
+describe("Alambic.Docker.Nginx helpers", () => {
   describe("nginxImageRef", () => {
     test("defaults to mainline alpine", () => {
       expect(nginxImageRef()).toBe("nginx:alpine");

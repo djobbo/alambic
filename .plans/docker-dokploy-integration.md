@@ -12,7 +12,7 @@ Prefer **small composable pieces** over one mega-resource:
 - **Strategies as data** — deployment update mode (below), registry auth source, and “pull vs push” paths are **props or small modules**, not hard-coded branches inside one reconcile.
 - **Pure helpers** — image ref normalization, label/tag builders, compose parsing → plain functions returning `Effect` where they touch IO.
 
-This matches Alchemy’s existing split (providers collection + bindings + `HttpClient` injection) and keeps Crucible easy to extend (Compose, Dockerfile) without rewriting Phase A.
+This matches Alchemy’s existing split (providers collection + bindings + `HttpClient` injection) and keeps Alambic easy to extend (Compose, Dockerfile) without rewriting Phase A.
 
 ## Goals
 
@@ -24,7 +24,7 @@ This matches Alchemy’s existing split (providers collection + bindings + `Http
 
 ## Architecture layers
 
-1. **Crucible package (`packages/crucible`)** — Dokploy + Docker-specific resources and providers (mirrors `alchemy/Neon`, `alchemy/Axiom`: `Providers.ts`, `Resource.ts` per resource).
+1. **Alambic package (`packages/alambic`)** — Dokploy + Docker-specific resources and providers (mirrors `alchemy/Neon`, `alchemy/Axiom`: `Providers.ts`, `Resource.ts` per resource).
 2. **Official Alchemy bits to reuse** — import from published `alchemy` (or workspace alias): `Bundle/Docker` for CLI subprocesses; `HttpClient` + `HttpApi` patterns for Dokploy REST; `createInternalTags`-style labels on managed objects if Dokploy supports labels/metadata.
 3. **Stack wiring** — user `alchemy.run.ts` merges providers (`Cloudflare.providers()`, `Dokploy.providers()`, `Docker.providers()`, …) and chooses **Layers** for each environment.
 
@@ -33,9 +33,9 @@ This matches Alchemy’s existing split (providers collection + bindings + `Http
 | Topic | Decision |
 |-------|-----------|
 | **Overall shape** | **As modular as possible using Effect** — Layers, tagged services, small resources, composable helpers (see above). |
-| **Dokploy mapping** | **Granular first**: one primary resource per Dokploy *application* (or nearest atomic API entity). Optional docs/examples show composing many apps under one logical “project” using plain `Effect.gen` + naming conventions — no requirement for a single composite Crucible resource unless it pays for itself later. |
+| **Dokploy mapping** | **Granular first**: one primary resource per Dokploy *application* (or nearest atomic API entity). Optional docs/examples show composing many apps under one logical “project” using plain `Effect.gen` + naming conventions — no requirement for a single composite Alambic resource unless it pays for itself later. |
 | **Environments** | **Configurable via Layers**, not a single global URL — e.g. `DOKPLOY_URL` / token from `ConfigProvider` or Profile per stage; support **multiple Dokploy backends** by providing different client Layers per stack or stage (same modular pattern as multi-account cloud). |
-| **Private registry** | **Support both modularly**: (a) Dokploy-managed registry credentials on the server; (b) deploy-time **`pushImage`** + `RegistryAuth` from Alchemy/Crucible. User picks per app via props + optional Layers — providers stay thin. |
+| **Private registry** | **Support both modularly**: (a) Dokploy-managed registry credentials on the server; (b) deploy-time **`pushImage`** + `RegistryAuth` from Alchemy/Alambic. User picks per app via props + optional Layers — providers stay thin. |
 | **Local dev (lifecycle)** | **Yes — auto start / stop / clean**: local Docker resources participate in the **same session lifecycle** as the rest of `alchemy dev` (start when dev session starts, stop/clean when dev stops or cleans — align implementation with how Alchemy handles Sidecar/local processes today). No separate mandatory CLI beyond declaring resources in the stack. |
 | **Ownership / adoption** | Use **deterministic naming** from stack + stage + logical id where Dokploy allows; implement **`read`** so foreign/unlabeled apps can return **`Unowned`** when metadata doesn’t match Alchemy ownership tags — gated behind `--adopt` like other providers (reconciler doctrine). |
 | **Updates on image/config change** | **Both**: (1) **full recreate / redeploy** path when needed or requested; (2) **Dokploy-native rolling / in-place restart** when the API supports it and props select that strategy. Expose as explicit **`deploymentStrategy`** (or equivalent) on the resource **or** split **capabilities** — implementation follows Dokploy’s capabilities without collapsing into one behavior. |
@@ -62,7 +62,7 @@ This matches Alchemy’s existing split (providers collection + bindings + `Http
 
 ## Phase C — Docker Compose
 
-- **Module `compose/parse`** — `docker compose config` or YAML parse → list of services → user/Crucible maps to atomic Dokploy resources or data blobs.
+- **Module `compose/parse`** — `docker compose config` or YAML parse → list of services → user/Alambic maps to atomic Dokploy resources or data blobs.
 - **Module `compose/dev`** — wraps `docker compose up/down` for local dev lifecycle (still tied to global dev start/stop/clean).
 - Neither module required for Phase A/B users.
 

@@ -1,8 +1,8 @@
 import * as Alchemy from "alchemy";
-import * as Dokploy from "crucible/Dokploy";
+import * as Dokploy from "alambic/Dokploy";
 import * as Effect from "effect/Effect";
 import { config as dotenv } from "dotenv";
-import { Docker } from "crucible";
+import { Docker } from "alambic";
 
 dotenv({
   path: ".env",

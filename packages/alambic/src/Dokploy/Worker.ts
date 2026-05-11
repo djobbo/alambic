@@ -69,12 +69,12 @@ const main = async () => {
   const manifestRaw = await fs.readFile(manifestPath, "utf8");
   const manifest = JSON.parse(manifestRaw);
   if (!manifest || !Array.isArray(manifest.files)) {
-    throw new Error("Crucible.Dokploy.Worker: invalid bundle manifest");
+    throw new Error("Alambic.Dokploy.Worker: invalid bundle manifest");
   }
 
   for (const file of manifest.files) {
     if (!file || typeof file.fileName !== "string" || typeof file.contentBase64 !== "string") {
-      throw new Error("Crucible.Dokploy.Worker: invalid bundled file entry");
+      throw new Error("Alambic.Dokploy.Worker: invalid bundled file entry");
     }
     const absPath = path.join(root, file.fileName);
     await fs.mkdir(path.dirname(absPath), { recursive: true });
@@ -93,7 +93,7 @@ const run = (command, args) => {
   const result = spawnSync(command, args, { stdio: "inherit" });
   if (result.status === 0) return;
   throw new Error(
-    \`Crucible.Dokploy.Worker: command failed (\${command}) code=\${result.status ?? "null"} signal=\${result.signal ?? "null"}\`,
+    \`Alambic.Dokploy.Worker: command failed (\${command}) code=\${result.status ?? "null"} signal=\${result.signal ?? "null"}\`,
   );
 };
 
@@ -122,7 +122,7 @@ const bundleMain = Effect.fn(function* (main: string) {
     catch: (cause) =>
       cause instanceof Error
         ? cause
-        : new Error("Crucible.Dokploy.Worker: failed to initialize rolldown"),
+        : new Error("Alambic.Dokploy.Worker: failed to initialize rolldown"),
   }).pipe(Effect.orDie);
 
   try {
@@ -138,7 +138,7 @@ const bundleMain = Effect.fn(function* (main: string) {
       catch: (cause) =>
         cause instanceof Error
           ? cause
-          : new Error("Crucible.Dokploy.Worker: failed to bundle worker main"),
+          : new Error("Alambic.Dokploy.Worker: failed to bundle worker main"),
     }).pipe(Effect.orDie);
 
     const entry = generated.output.find(
@@ -147,7 +147,7 @@ const bundleMain = Effect.fn(function* (main: string) {
     );
     if (!entry) {
       return yield* Effect.die(
-        new Error("Crucible.Dokploy.Worker: rolldown did not produce an entry chunk"),
+        new Error("Alambic.Dokploy.Worker: rolldown did not produce an entry chunk"),
       );
     }
 
@@ -174,7 +174,7 @@ const bundleMain = Effect.fn(function* (main: string) {
       catch: (cause) =>
         cause instanceof Error
           ? cause
-          : new Error("Crucible.Dokploy.Worker: failed to close rolldown bundle"),
+          : new Error("Alambic.Dokploy.Worker: failed to close rolldown bundle"),
     }).pipe(Effect.orDie);
   }
 });

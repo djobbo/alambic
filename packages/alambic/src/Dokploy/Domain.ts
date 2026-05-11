@@ -97,14 +97,14 @@ export const readDomainAttrs = (domain: Domain): Effect.Effect<DomainAttrs> =>
   });
 
 export type Domain = Resource<
-  "Crucible.Dokploy.Domain",
+  "Alambic.Dokploy.Domain",
   ApplicationDomainProps,
   DomainAttrs,
   never,
   Providers
 >;
 
-export const Domain = Resource<Domain>("Crucible.Dokploy.Domain");
+export const Domain = Resource<Domain>("Alambic.Dokploy.Domain");
 
 /** Collect Dokploy-compatible domain specs produced by sibling {@link Domain} resources. */
 export const collectDomainSpecs = (
@@ -144,7 +144,7 @@ export const DomainProvider = () =>
       reconcile: Effect.fn(function* ({ news }) {
         if (!news || !isResolved(news)) {
           return yield* Effect.die(
-            new Error("Crucible.Dokploy.Domain: unresolved props at reconcile"),
+            new Error("Alambic.Dokploy.Domain: unresolved props at reconcile"),
           );
         }
         return normalizeDomainAttrs(news);

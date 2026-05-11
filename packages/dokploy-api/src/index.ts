@@ -20,7 +20,7 @@ export class DokployConnection extends Context.Service<
     readonly baseUrl: string;
     readonly apiKey: Redacted.Redacted<string>;
   }
->()("@crucible/dokploy-api/DokployConnection", {
+>()("@alambic/dokploy-api/DokployConnection", {
   make: Effect.gen(function* () {
     const apiKey = yield* Config.string("DOKPLOY_API_KEY");
     const baseUrl = yield* Config.string("DOKPLOY_URL");
@@ -34,7 +34,7 @@ export class DokployConnection extends Context.Service<
 }
 
 export class DokployApi extends Context.Service<DokployApi, Dokploy>()(
-  "@crucible/dokploy-api/DokployApi",
+  "@alambic/dokploy-api/DokployApi",
   {
     make: Effect.gen(function* () {
       const { apiKey, baseUrl } = yield* DokployConnection;

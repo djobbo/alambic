@@ -72,7 +72,7 @@ export const deployComposePayload = Effect.fn(function* (
   const pick = yield* pickComposeService(manifest, logicalId, appName);
   if (Option.isNone(pick)) {
     return yield* Effect.die(
-      new Error("Crucible.Dokploy.Application.Compose: no matching compose service in manifest"),
+      new Error("Alambic.Dokploy.Application.Compose: no matching compose service in manifest"),
     );
   }
   return { dockerImage: pick.value.dockerImage, compose: pick.value.service };

@@ -2,14 +2,16 @@ import { isResolved } from "alchemy/Diff";
 import { createPhysicalName } from "alchemy/PhysicalName";
 import * as Provider from "alchemy/Provider";
 import { Resource } from "alchemy/Resource";
-import type { DockerImage } from "../../Docker/Image.ts";
+import type { DockerCompose } from "../../Docker/Compose.ts";
 import * as Effect from "effect/Effect";
 import { domainSpecsFingerprintForApplication } from "../Domain.ts";
+import { Dokploy } from "../Dokploy.ts";
 import type { Providers } from "../Providers.ts";
 import type { DockerComposeService } from "../dockerCompose.ts";
-import { Dokploy } from "../Dokploy.ts";
 import {
+  composeManifestResolved,
   deleteShared,
+  deployComposePayload,
   finalizeApplicationReconcile,
   readShared,
   resolvedFingerprint,
@@ -17,26 +19,26 @@ import {
   type ApplicationShared,
 } from "./shared.ts";
 
-/** Docker application from image + optional inline service options (Compose-shaped). */
-export type ApplicationImageProps = ApplicationShared & {
-  readonly image: DockerImage;
-  /** Environment, ports, restart, mounts, … — same shape as Compose service options. */
-  readonly service?: DockerComposeService;
+/** Dokploy Docker app wired from a {@link DockerCompose} manifest; picks service by {@link appName} or logical resource id. */
+export type ApplicationComposeProps = ApplicationShared & {
+  readonly compose: DockerCompose;
 };
 
-export type ApplicationImage = Resource<
-  "Crucible.Dokploy.Application.Image",
-  ApplicationImageProps,
+export type ApplicationCompose = Resource<
+  "Alambic.Dokploy.Application.Compose",
+  ApplicationComposeProps,
   ApplicationOutputs,
   never,
   Providers
 >;
 
-export const ApplicationImage = Resource<ApplicationImage>("Crucible.Dokploy.Application.Image");
+export const ApplicationCompose = Resource<ApplicationCompose>(
+  "Alambic.Dokploy.Application.Compose",
+);
 
-export const ApplicationImageProvider = () =>
+export const ApplicationComposeProvider = () =>
   Provider.effect(
-    ApplicationImage,
+    ApplicationCompose,
     Effect.sync(() => ({
       stables: ["applicationId", "environmentId"],
       diff: Effect.fn(function* ({ id, olds, news, output }) {
@@ -45,9 +47,12 @@ export const ApplicationImageProvider = () =>
         const environmentId = news.environment.environmentId;
         const physical = yield* createPhysicalName({ id });
 
-        const dockerImageNew = news.image.dockerImage;
-        const svcNew = news.service;
-        const fpExpect = yield* resolvedFingerprint(id, undefined, news.appName, svcNew);
+        const manifest = yield* composeManifestResolved(news.compose);
+        const payload = yield* deployComposePayload(id, news.appName, manifest);
+        const dockerImageNew = payload.dockerImage;
+        const svcNew = payload.compose;
+
+        const fpExpect = yield* resolvedFingerprint(id, manifest, news.appName, svcNew);
         const domFpNew = yield* domainSpecsFingerprintForApplication(news.domains);
 
         if (output) {
@@ -69,8 +74,11 @@ export const ApplicationImageProvider = () =>
         if (!olds || !isResolved(olds)) return;
 
         const oldEnvironmentId = olds.environment?.environmentId;
-        const dockerImageOld = olds.image?.dockerImage;
-        const svcOld = olds.service;
+
+        const manifestOld = yield* composeManifestResolved(olds.compose);
+        const pOld = yield* deployComposePayload(id, olds.appName, manifestOld);
+        const dockerImageOld = pOld.dockerImage;
+        const svcOld = pOld.compose;
 
         if (environmentId !== oldEnvironmentId) return { action: "replace" } as const;
         if ((news.serverId ?? undefined) !== (olds.serverId ?? undefined))
@@ -83,7 +91,7 @@ export const ApplicationImageProvider = () =>
         const slugOld = olds.appName ?? physical;
         if (nameNew !== nameOld || slugNew !== slugOld) return { action: "update" } as const;
 
-        const fpOld = yield* resolvedFingerprint(id, undefined, olds.appName, svcOld);
+        const fpOld = yield* resolvedFingerprint(id, manifestOld, olds.appName, svcOld);
         if (fpExpect !== fpOld) return { action: "update" } as const;
         const domOld = yield* domainSpecsFingerprintForApplication(olds.domains);
         if (domFpNew !== domOld) return { action: "update" } as const;
@@ -92,7 +100,20 @@ export const ApplicationImageProvider = () =>
       reconcile: Effect.fn(function* ({ id, news, output }) {
         if (!news || !isResolved(news)) {
           return yield* Effect.die(
-            new Error("Crucible.Dokploy.Application.Image: unresolved props at reconcile"),
+            new Error("Alambic.Dokploy.Application.Compose: unresolved props at reconcile"),
+          );
+        }
+
+        const composeManifest = yield* composeManifestResolved(news.compose);
+
+        let payload: { dockerImage: string; compose: DockerComposeService | undefined };
+        try {
+          payload = yield* deployComposePayload(id, news.appName, composeManifest);
+        } catch (e) {
+          return yield* Effect.die(
+            e instanceof Error
+              ? e
+              : new Error("Alambic.Dokploy.Application.Compose: invalid compose props"),
           );
         }
 
@@ -101,37 +122,24 @@ export const ApplicationImageProvider = () =>
         const displayName = news.name ?? id;
         const environmentId = news.environment.environmentId;
 
-        let payloadCompose: DockerComposeService | undefined;
-        let dockerImage: string;
-        try {
-          dockerImage = news.image.dockerImage;
-          payloadCompose = news.service;
-        } catch (e) {
-          return yield* Effect.die(
-            e instanceof Error
-              ? e
-              : new Error("Crucible.Dokploy.Application.Image: invalid image props"),
-          );
-        }
-
         const snap = yield* dokploy.applications.upsertDocker({
           applicationId: output?.applicationId,
           environmentId,
           serverId: news.serverId,
           name: displayName,
           appName: physicalAppName,
-          dockerImage,
+          dockerImage: payload.dockerImage,
           registry: news.registry,
-          compose: payloadCompose,
+          compose: payload.compose,
         });
 
         return yield* finalizeApplicationReconcile({
           domains: dokploy.domains,
           snap,
           id,
-          composeManifest: undefined,
+          composeManifest,
           news,
-          payloadCompose,
+          payloadCompose: payload.compose,
           output,
         });
       }),

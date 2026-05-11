@@ -20,7 +20,7 @@ const slugLogicalId = (ref: string) =>
 
 /** Logical resource backing Docker image refs. */
 export type DockerImage = Resource<
-  "Crucible.Docker.Image",
+  "Alambic.Docker.Image",
   ImageProps,
   { readonly dockerImage: string },
   never,
@@ -28,7 +28,7 @@ export type DockerImage = Resource<
 >;
 
 /** Register with {@link ImageProvider}. */
-export const DockerImage = Resource<DockerImage>("Crucible.Docker.Image");
+export const DockerImage = Resource<DockerImage>("Alambic.Docker.Image");
 
 export const ImageProvider = () =>
   Provider.effect(
@@ -51,7 +51,7 @@ export const ImageProvider = () =>
       reconcile: Effect.fn(function* ({ news }) {
         if (news === undefined || hasUnresolvedInputs(news)) {
           return yield* Effect.die(
-            new Error("Crucible.Docker.Image: unresolved props at reconcile"),
+            new Error("Alambic.Docker.Image: unresolved props at reconcile"),
           );
         }
         const n = news as ImageProps;

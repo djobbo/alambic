@@ -14,7 +14,7 @@ export interface ProjectProps {
 }
 
 export type Project = Resource<
-  "Crucible.Dokploy.Project",
+  "Alambic.Dokploy.Project",
   ProjectProps,
   {
     projectId: string;
@@ -25,7 +25,7 @@ export type Project = Resource<
   Providers
 >;
 
-export const Project = Resource<Project>("Crucible.Dokploy.Project");
+export const Project = Resource<Project>("Alambic.Dokploy.Project");
 
 export const ProjectProvider = () =>
   Provider.effect(
@@ -62,7 +62,7 @@ export const ProjectProvider = () =>
         const next = news ?? {};
         if (!isResolved(next)) {
           return yield* Effect.die(
-            new Error("Crucible.Dokploy.Project: unresolved props at reconcile"),
+            new Error("Alambic.Dokploy.Project: unresolved props at reconcile"),
           );
         }
         const dokploy = yield* Dokploy;
@@ -75,7 +75,7 @@ export const ProjectProvider = () =>
         });
 
         if (Option.isNone(updated)) {
-          return yield* Effect.die(new Error("Crucible.Dokploy.Project: failed to update project"));
+          return yield* Effect.die(new Error("Alambic.Dokploy.Project: failed to update project"));
         }
         return {
           projectId: updated.value.projectId,
