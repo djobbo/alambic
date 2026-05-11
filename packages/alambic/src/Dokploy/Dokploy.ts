@@ -507,15 +507,16 @@ const upsertDockerApplicationHttp = (input: UpsertDockerApplicationInput) =>
         );
       }
     }
-    const registryBody: Record<string, unknown> = {
-      applicationId: nextId,
-      dockerImage: input.dockerImage,
-    };
-    if (input.registry?.username) registryBody.username = input.registry.username;
-    if (input.registry?.password) registryBody.password = Redacted.value(input.registry.password);
-    if (input.registry?.registryUrl) registryBody.registryUrl = input.registry.registryUrl;
     yield* api
-      .applicationSaveDockerProvider({ payload: registryBody as never })
+      .applicationSaveDockerProvider({
+        payload: {
+          applicationId: nextId,
+          dockerImage: input.dockerImage,
+          username: input.registry?.username?.trim() ? input.registry.username : null,
+          password: input.registry?.password ? Redacted.value(input.registry.password) : null,
+          registryUrl: input.registry?.registryUrl?.trim() ? input.registry.registryUrl : null,
+        },
+      })
       .pipe(Effect.tapError((e) => Console.error("applicationSaveDockerProvider", e)));
     yield* applyComposeConfiguration(nextId, input.compose).pipe(
       Effect.tapError((e) => Console.error("applyComposeConfiguration", e)),

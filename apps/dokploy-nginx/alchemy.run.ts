@@ -41,6 +41,7 @@ export default Alchemy.Stack(
 
     const nginxImage = yield* Docker.NginxImageTag({ variant: "alpine" });
     const app = yield* Dokploy.Application.Image("my-cool-app", {
+      name: "My Cool App",
       environment,
       image: nginxImage,
       domains: [domain],
@@ -67,6 +68,7 @@ export default Alchemy.Stack(
     });
 
     const app2 = yield* Dokploy.Application.Worker("worker-app", {
+      name: "Worker Hello World",
       environment,
       domains: [workerDomain],
       main: "./worker.ts",
