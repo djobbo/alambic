@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*.ts", "alchemy.run.ts"],
-  "compilerOptions": {
-    "composite": true,
-    "resolveJsonModule": true
-  },
-  "references": [{ "path": "../../alchemy/tsconfig.json" }]
-}

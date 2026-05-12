@@ -1,8 +1,0 @@
-{
-  "name": "alchemy-stacks",
-  "version": "0.0.1",
-  "private": true,
-  "dependencies": {
-    "alchemy": "workspace:*"
-  }
-}

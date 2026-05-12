@@ -1,5 +1,0 @@
-bin/alchemy.js
-!templates/**/wrangler.jsonc
-.nuxt
-workers/*.js
-bin/external-*.js

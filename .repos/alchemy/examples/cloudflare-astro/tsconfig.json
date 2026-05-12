@@ -1,9 +1,0 @@
-{
-  "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "alchemy.run.ts"],
-  "compilerOptions": {
-    "types": ["astro/client", "@cloudflare/workers-types"]
-  },
-  "references": [{ "path": "../../alchemy/tsconfig.json" }]
-}
